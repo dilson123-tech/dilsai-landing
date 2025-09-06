@@ -1,0 +1,131 @@
+console.log("[DilsAI] SCRIPT.JS CARREGADO");
+
+// ===== Detecta ambiente =====
+const isLocal = location.hostname === "127.0.0.1" || location.hostname === "localhost";
+
+// Se tiver API pública, troca aqui ↓
+const PROD_API = "https://dilsai-api.onrender.com"; // depois ajusta com sua URL real
+
+// Base da API
+window.API_BASE = isLocal ? "http://127.0.0.1:8000" : PROD_API;
+window.ASK_URL  = window.API_BASE + "/ask";
+
+console.log("[DilsAI] Ambiente:", isLocal ? "LOCAL" : "PRODUÇÃO");
+console.log("[DilsAI] window.ASK_URL =", window.ASK_URL);
+
+// Atualiza ano no rodapé
+document.getElementById("year").textContent = new Date().getFullYear();
+
+// ========= Função de chamada =========
+async function askDilsAI(question) {
+  try {
+    const res = await fetch(window.ASK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question })
+    });
+    if (!res.ok) throw new Error("API " + res.status);
+    const { answer } = await res.json();
+    alert("🤖 " + answer);
+  } catch (e) {
+    alert("❌ Erro: " + e.message + "\nEndpoint: " + window.ASK_URL);
+  }
+}
+
+// ========= Delegação CTA =========
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-ask], a, button");
+  if (!el) return;
+  const txt = (el.textContent || "").trim().toLowerCase();
+  if (el.hasAttribute("data-ask") || txt === "experimente agora") {
+    e.preventDefault();
+    const q = window.prompt("Faça sua pergunta para o DilsAI:");
+    if (q) askDilsAI(q);
+  }
+}, true);
+
+console.log("[DilsAI] CTA ativo ✅");
+
+// ===== DilsAI Chat – bootstrap =====
+(function () {
+  if (window.DILSAI_CHATBOUND) return;
+  window.DILSAI_CHATBOUND = true;
+
+  const chat = document.getElementById('dilsai-chatbox');
+  const msgs = document.getElementById('dilsai-chat-messages');
+  const form = document.getElementById('dilsai-chat-form');
+  const input = document.getElementById('dilsai-chat-input');
+  const launcher = document.getElementById('dilsai-launcher');
+
+  if (!chat || !msgs || !form || !input) {
+    console.warn('[DilsAI] chatbox HTML não encontrado.');
+    return;
+  }
+
+  // helpers
+  function openChat() {
+    chat.style.display = 'flex';
+    setTimeout(() => input.focus(), 50);
+  }
+  function closeChat() {
+    chat.style.display = 'none';
+  }
+  function addMsg(role, text) {
+    const li = document.createElement('div');
+    li.style.margin = '8px 0';
+    li.style.lineHeight = '1.4';
+    li.innerHTML =
+      role === 'me'
+        ? `<div style="text-align:right"><span style="display:inline-block;background:#eef5ff;color:#0b4880;padding:8px 10px;border-radius:10px 10px 0 10px;max-width:92%">${text}</span></div>`
+        : `<div style="text-align:left"><span style="display:inline-block;background:#f6f7f8;color:#222;padding:8px 10px;border-radius:10px 10px 10px 0;max-width:92%">${text}</span></div>`;
+    msgs.appendChild(li);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // abre chat pelo botão flutuante
+  if (launcher) {
+    launcher.addEventListener('click', () => {
+      const isOpen = chat.style.display !== 'none' && chat.style.display !== '';
+      if (isOpen) { closeChat(); } else { openChat(); }
+    });
+  }
+
+  // fecha com ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeChat();
+  });
+
+  // envia mensagem ao backend
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const q = (input.value || '').trim();
+    if (!q) return;
+    addMsg('me', q);
+    input.value = '';
+    try {
+      const r = await fetch(window.ASK_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ question: q })
+      });
+      if (!r.ok) throw new Error('API ' + r.status);
+      const { answer } = await r.json();
+      addMsg('ai', answer || '(sem resposta)');
+    } catch (err) {
+      addMsg('ai', '❌ Erro: ' + err.message);
+    }
+  });
+
+  // também abre o chat quando clicar em "Experimente agora" ou qualquer [data-ask]
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-ask], a, button');
+    if (!el) return;
+    const txt = (el.textContent || '').trim().toLowerCase();
+    if (el.hasAttribute('data-ask') || txt === 'experimente agora') {
+      e.preventDefault();
+      openChat();
+    }
+  }, true);
+
+  console.log('[DilsAI] Chat ligado ✅');
+})();
