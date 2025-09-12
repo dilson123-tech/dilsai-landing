@@ -8,7 +8,7 @@ const PROD_API = "https://dilsai-api.onrender.com"; // depois ajusta com sua URL
 
 // Base da API
 window.API_BASE = isLocal ? "http://127.0.0.1:8000" : PROD_API;
-window.ASK_URL  = window.API_BASE + "/ask";
+window.ASK_URL  = window.API_BASE + "/chat";
 
 console.log("[DilsAI] Ambiente:", isLocal ? "LOCAL" : "PRODUÇÃO");
 console.log("[DilsAI] window.ASK_URL =", window.ASK_URL);
@@ -22,10 +22,10 @@ async function askDilsAI(question) {
     const res = await fetch(window.ASK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question })
+      body: JSON.stringify({ message: question, user_name: "Usuário" })
     });
     if (!res.ok) throw new Error("API " + res.status);
-    const { answer } = await res.json();
+    const { response } = await res.json();
     alert("🤖 " + answer);
   } catch (e) {
     alert("❌ Erro: " + e.message + "\nEndpoint: " + window.ASK_URL);
@@ -109,7 +109,7 @@ console.log("[DilsAI] CTA ativo ✅");
         body: JSON.stringify({ question: q })
       });
       if (!r.ok) throw new Error('API ' + r.status);
-      const { answer } = await r.json();
+      const { response } = await r.json();
       addMsg('ai', answer || '(sem resposta)');
     } catch (err) {
       addMsg('ai', '❌ Erro: ' + err.message);
@@ -185,7 +185,7 @@ console.log("[DilsAI] CTA ativo ✅");
           body: JSON.stringify({ question: q })
         });
         if(!r.ok) throw new Error('API '+r.status);
-        const { answer } = await r.json();
+        const { response } = await r.json();
         push('bot', answer);
       }catch(err){
         push('bot', 'Erro: '+err.message);
@@ -325,7 +325,7 @@ console.log("[DilsAI] CTA ativo ✅");
           body: JSON.stringify({ question: msg })
         });
         if (!r.ok) throw new Error('API ' + r.status);
-        const { answer } = await r.json();
+        const { response } = await r.json();
         pushMsg('DilsAI', answer);
       } catch(err){ pushMsg('DilsAI','Erro: '+err.message); }
     });
@@ -419,7 +419,7 @@ console.log("[DilsAI] CTA ativo ✅");
             body: JSON.stringify({ question: msg })
           });
           if (!r.ok) throw new Error('API ' + r.status);
-          const { answer } = await r.json();
+          const { response } = await r.json();
           const ai = document.createElement('div');
           ai.innerHTML = `<strong>DilsAI:</strong> ${answer}`;
           out.appendChild(ai); out.scrollTop = out.scrollHeight;
