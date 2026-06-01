@@ -26,16 +26,43 @@ if (yearEl) {
 }
 
 // ===== Opções oficiais do backend =====
+const DILSAI_LEVELS = [
+  { value: "geral", label: "Geral" },
+  { value: "fundamental_1", label: "Ensino Fundamental I" },
+  { value: "fundamental_2", label: "Ensino Fundamental II" },
+  { value: "ensino_medio", label: "Ensino Médio" },
+  { value: "tecnico", label: "Curso Técnico" },
+  { value: "concurso", label: "Concurso" },
+  { value: "universidade", label: "Universidade" },
+];
+
 const DILSAI_TOPICS = [
   { value: "geral", label: "Geral" },
-  { value: "programacao", label: "Programação" },
-  { value: "portugues", label: "Português e redação" },
   { value: "matematica_logica", label: "Matemática e lógica" },
+  { value: "portugues", label: "Português" },
+  { value: "redacao", label: "Redação" },
+  { value: "programacao", label: "Programação" },
+  { value: "informatica", label: "Informática" },
+  { value: "direito", label: "Direito" },
+  { value: "administracao", label: "Administração" },
+  { value: "fisica", label: "Física" },
+  { value: "quimica", label: "Química" },
+  { value: "biologia", label: "Biologia" },
+  { value: "historia", label: "História" },
+  { value: "geografia", label: "Geografia" },
+  { value: "ingles", label: "Inglês" },
+  { value: "filosofia", label: "Filosofia" },
+  { value: "sociologia", label: "Sociologia" },
+  { value: "engenharia", label: "Engenharia" },
+  { value: "saude", label: "Saúde" },
+  { value: "humanas", label: "Humanas" },
+  { value: "negocios", label: "Negócios" },
 ];
 
 const DILSAI_MODES = [
   { value: "professor", label: "Modo Professor" },
   { value: "direto", label: "Direto" },
+  { value: "resumo", label: "Resumo" },
   { value: "passo_a_passo", label: "Passo a passo" },
   { value: "revisao", label: "Revisão" },
   { value: "simulado", label: "Simulado" },
@@ -61,30 +88,112 @@ function getOptionHtml(options) {
     .join("");
 }
 
+function populateSelectOptions(selectId, options, defaultValue = "geral") {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+
+  const currentValue = select.value || defaultValue;
+  select.innerHTML = getOptionHtml(options);
+
+  const hasCurrentValue = options.some((item) => item.value === currentValue);
+  select.value = hasCurrentValue ? currentValue : defaultValue;
+}
+
+function populateFullStudyTaxonomyOptions() {
+  populateSelectOptions("dilsai-full-level", DILSAI_LEVELS, "geral");
+  populateSelectOptions("dilsai-full-topic", DILSAI_TOPICS, "geral");
+  populateSelectOptions("dilsai-full-mode", DILSAI_MODES, "professor");
+}
+
+
+function normalizeDilsAILevel(level) {
+  const normalized = String(level || "geral").trim();
+
+  const levelMap = {
+    geral: "geral",
+    fundamental_1: "fundamental_1",
+    fundamental_i: "fundamental_1",
+    fundamental_2: "fundamental_2",
+    fundamental_ii: "fundamental_2",
+    ensino_medio: "ensino_medio",
+    medio: "ensino_medio",
+    médio: "ensino_medio",
+    tecnico: "tecnico",
+    técnico: "tecnico",
+    concurso: "concurso",
+    universidade: "universidade",
+  };
+
+  return levelMap[normalized] || "geral";
+}
 
 function normalizeDilsAITopic(topic) {
   const normalized = String(topic || "geral").trim();
 
   const topicMap = {
+    geral: "geral",
     matematica: "matematica_logica",
     matemática: "matematica_logica",
     matematica_logica: "matematica_logica",
-    programacao: "programacao",
-    programação: "programacao",
     portugues: "portugues",
     português: "portugues",
-    geral: "geral",
+    redacao: "redacao",
+    redação: "redacao",
+    programacao: "programacao",
+    programação: "programacao",
+    informatica: "informatica",
+    informática: "informatica",
+    direito: "direito",
+    administracao: "administracao",
+    administração: "administracao",
+    fisica: "fisica",
+    física: "fisica",
+    quimica: "quimica",
+    química: "quimica",
+    biologia: "biologia",
+    historia: "historia",
+    história: "historia",
+    geografia: "geografia",
+    ingles: "ingles",
+    inglês: "ingles",
+    filosofia: "filosofia",
+    sociologia: "sociologia",
+    engenharia: "engenharia",
+    saude: "saude",
+    saúde: "saude",
+    humanas: "humanas",
+    negocios: "negocios",
+    negócios: "negocios",
   };
 
   return topicMap[normalized] || "geral";
 }
 
-async function askDilsAI({ message, userName, topic, mode, context }) {
+function normalizeDilsAIMode(mode) {
+  const normalized = String(mode || "professor").trim();
+
+  const modeMap = {
+    direto: "direto",
+    professor: "professor",
+    resumo: "resumo",
+    passo_a_passo: "passo_a_passo",
+    revisao: "revisao",
+    revisão: "revisao",
+    simulado: "simulado",
+    fonte_segura: "fonte_segura",
+  };
+
+  return modeMap[normalized] || "professor";
+}
+
+
+async function askDilsAI({ message, userName, level, topic, mode, context }) {
   const payload = {
     user_name: userName || "Aluno",
     message,
-    topic,
-    mode,
+    level: normalizeDilsAILevel(level || "geral"),
+    topic: normalizeDilsAITopic(topic || "geral"),
+    mode: normalizeDilsAIMode(mode || "professor"),
   };
 
   if (context && context.trim()) {
@@ -443,9 +552,9 @@ async function handleFullStudySubmit(event) {
 
   if (!message) return;
 
-  const selectedLevel = level?.value || "geral";
+  const selectedLevel = normalizeDilsAILevel(level?.value || "geral");
   const selectedTopic = normalizeDilsAITopic(topic?.value || "geral");
-  const selectedMode = mode?.value || "professor";
+  const selectedMode = normalizeDilsAIMode(mode?.value || "professor");
   const levelLabel = getSelectLabel(level);
   const topicLabel = getSelectLabel(topic);
   const modeLabel = getSelectLabel(mode);
@@ -476,6 +585,7 @@ async function handleFullStudySubmit(event) {
     const data = await askDilsAI({
       message,
       userName: "Dilson",
+      level: selectedLevel,
       topic: selectedTopic,
       mode: selectedMode,
       context: enrichedContext,
@@ -494,7 +604,7 @@ async function handleFullStudySubmit(event) {
 
     addFullStudyMessage(
       "assistant",
-      data.answer || "Recebi, mas a API não retornou resposta.",
+      data.answer || data.response || "Recebi, mas a API não retornou resposta.",
       metaParts.join(" • ") || "DilsAI"
     );
   } catch (error) {
@@ -518,6 +628,7 @@ async function handleFullStudySubmit(event) {
 }
 
 function bindFullStudyChatEvents() {
+  populateFullStudyTaxonomyOptions();
   ensureFullStudyWelcome();
 
   document.addEventListener("click", (event) => {
