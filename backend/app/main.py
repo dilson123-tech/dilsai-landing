@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.schemas import ChatRequest, ChatResponse
+from app.services.knowledge import find_knowledge_context
 from app.services.llm import generate_study_answer
 
 settings = get_settings()
@@ -44,8 +45,9 @@ async def health() -> dict:
 
 @app.post("/api/v1/chat", response_model=ChatResponse)
 async def chat(payload: ChatRequest) -> ChatResponse:
+    knowledge = find_knowledge_context(payload)
     answer = await generate_study_answer(payload=payload, settings=settings)
-    used_context = bool(payload.context and payload.context.strip())
+    used_context = bool(payload.context and payload.context.strip()) or knowledge.found
 
     safety_notice = None
     confidence = "general"
