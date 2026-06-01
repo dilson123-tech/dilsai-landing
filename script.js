@@ -187,6 +187,47 @@ function normalizeDilsAIMode(mode) {
 }
 
 
+
+function looksLikeLeakedMetaContext(value) {
+  const clean = String(value || "").trim();
+
+  if (!clean) return false;
+
+  const normalized = clean
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const hasMetaWords =
+    normalized.includes("tema:") &&
+    normalized.includes("modo:") &&
+    (
+      normalized.includes("usou contexto") ||
+      normalized.includes("fonte:") ||
+      normalized.includes("confianca:")
+    );
+
+  const isShortSingleMetaLine = clean.length <= 180 && !clean.includes("\n");
+
+  return hasMetaWords && isShortSingleMetaLine;
+}
+
+function clearLeakedMetaContextIfNeeded() {
+  const contextFields = [
+    document.getElementById("dilsai-full-context"),
+    document.getElementById("dilsai-context"),
+  ];
+
+  contextFields.forEach((field) => {
+    if (!field) return;
+
+    if (looksLikeLeakedMetaContext(field.value)) {
+      field.value = "";
+      field.dataset.cleanedLeakedMeta = "1";
+    }
+  });
+}
+
 async function askDilsAI({ message, userName, level, topic, mode, context }) {
   const payload = {
     user_name: userName || "Aluno",
@@ -266,7 +307,7 @@ function ensureChatShell() {
 
       <details id="dilsai-context-details" style="font-size:12px;color:#475569;">
         <summary style="cursor:pointer;font-weight:700;">Adicionar contexto/material para resposta precisa</summary>
-        <textarea id="dilsai-context" rows="4" placeholder="Cole aqui trecho de apostila, aula, PDF ou material..." style="width:100%;margin-top:8px;padding:8px;border:1px solid #cbd5e1;border-radius:10px;resize:vertical;font-family:Arial,sans-serif;"></textarea>
+        <textarea id="dilsai-context" rows="4" autocomplete="off" data-lpignore="true" data-form-type="other" placeholder="Cole aqui trecho de apostila, aula, PDF ou material..." style="width:100%;margin-top:8px;padding:8px;border:1px solid #cbd5e1;border-radius:10px;resize:vertical;font-family:Arial,sans-serif;"></textarea>
       </details>
     </section>
 
@@ -431,6 +472,7 @@ async function handleChatSubmit(event) {
 
 function bindChatEvents() {
   ensureChatShell();
+  clearLeakedMetaContextIfNeeded();
   ensureLauncher();
 
   document.addEventListener("submit", (event) => {
@@ -631,6 +673,7 @@ async function handleFullStudySubmit(event) {
 
 function bindFullStudyChatEvents() {
   populateFullStudyTaxonomyOptions();
+  clearLeakedMetaContextIfNeeded();
   ensureFullStudyWelcome();
 
   document.addEventListener("click", (event) => {
