@@ -67,3 +67,7 @@ class ChatResponse(BaseModel):
     used_context: bool
     confidence: str
     safety_notice: str | None = None
+    source_title: str | None = None
+    source_path: str | None = None
+    source_type: str | None = None
+    source_score: int | None = None
