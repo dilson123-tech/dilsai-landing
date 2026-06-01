@@ -61,6 +61,24 @@ function getOptionHtml(options) {
     .join("");
 }
 
+
+function normalizeDilsAITopic(topic) {
+  const normalized = String(topic || "geral").trim();
+
+  const topicMap = {
+    matematica: "matematica_logica",
+    matemática: "matematica_logica",
+    matematica_logica: "matematica_logica",
+    programacao: "programacao",
+    programação: "programacao",
+    portugues: "portugues",
+    português: "portugues",
+    geral: "geral",
+  };
+
+  return topicMap[normalized] || "geral";
+}
+
 async function askDilsAI({ message, userName, topic, mode, context }) {
   const payload = {
     user_name: userName || "Aluno",
@@ -263,7 +281,7 @@ async function handleChatSubmit(event) {
   event.preventDefault();
 
   const input = document.getElementById("dilsai-chat-input");
-  const topic = document.getElementById("dilsai-topic")?.value || "geral";
+  const topic = normalizeDilsAITopic(document.getElementById("dilsai-topic")?.value || "geral");
   const mode = document.getElementById("dilsai-mode")?.value || "professor";
   const context = document.getElementById("dilsai-context")?.value || "";
   const message = (input?.value || "").trim();
@@ -341,3 +359,204 @@ if (document.readyState === "loading") {
 } else {
   bindChatEvents();
 }
+
+// === DilsAI Estudos — Full Page Chat Layout V1 ===
+const DILSAI_FULL_PAGE_CHAT_V1 = true;
+
+function getFullStudyElements() {
+  return {
+    section: document.getElementById("dilsai-study-app"),
+    messages: document.getElementById("dilsai-full-messages"),
+    form: document.getElementById("dilsai-full-chat-form"),
+    input: document.getElementById("dilsai-full-input"),
+    level: document.getElementById("dilsai-full-level"),
+    topic: document.getElementById("dilsai-full-topic"),
+    mode: document.getElementById("dilsai-full-mode"),
+    context: document.getElementById("dilsai-full-context"),
+  };
+}
+
+function getSelectLabel(select) {
+  if (!select) return "";
+  return select.options[select.selectedIndex]?.text || select.value || "";
+}
+
+function addFullStudyMessage(role, text, meta) {
+  const { messages } = getFullStudyElements();
+  if (!messages) return;
+
+  const bubble = document.createElement("div");
+  bubble.className = `study-app__message study-app__message--${role === "user" ? "user" : "assistant"}`;
+
+  if (meta) {
+    const metaNode = document.createElement("span");
+    metaNode.className = "study-app__message-meta";
+    metaNode.textContent = meta;
+    bubble.appendChild(metaNode);
+  }
+
+  const textNode = document.createElement("div");
+  textNode.textContent = text;
+  bubble.appendChild(textNode);
+
+  messages.appendChild(bubble);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function ensureFullStudyWelcome() {
+  const { messages } = getFullStudyElements();
+  if (!messages || messages.dataset.welcome === "1") return;
+
+  addFullStudyMessage(
+    "assistant",
+    "Olá! Eu sou o Professor DilsAI. Escolha o nível, a matéria e o modo. Se a pergunta depender de apostila, questão, PDF ou regra específica, cole o material no campo de contexto para eu responder com mais precisão.",
+    "Bem-vindo"
+  );
+
+  messages.dataset.welcome = "1";
+}
+
+function openFullStudyChat() {
+  const { section, input } = getFullStudyElements();
+  ensureFullStudyWelcome();
+
+  if (section) {
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  setTimeout(() => input?.focus(), 250);
+}
+
+function clearFullStudyChat() {
+  const { messages } = getFullStudyElements();
+  if (!messages) return;
+  messages.innerHTML = "";
+  messages.dataset.welcome = "";
+  ensureFullStudyWelcome();
+}
+
+async function handleFullStudySubmit(event) {
+  event.preventDefault();
+
+  const { input, level, topic, mode, context, form } = getFullStudyElements();
+  const message = (input?.value || "").trim();
+
+  if (!message) return;
+
+  const selectedLevel = level?.value || "geral";
+  const selectedTopic = normalizeDilsAITopic(topic?.value || "geral");
+  const selectedMode = mode?.value || "professor";
+  const levelLabel = getSelectLabel(level);
+  const topicLabel = getSelectLabel(topic);
+  const modeLabel = getSelectLabel(mode);
+  const rawContext = (context?.value || "").trim();
+
+  const enrichedContext = [
+    `Nível de estudo selecionado: ${levelLabel || selectedLevel}.`,
+    rawContext ? `Material/contexto enviado pelo usuário:\n${rawContext}` : "",
+  ].filter(Boolean).join("\n\n");
+
+  addFullStudyMessage("user", message, `${levelLabel} • ${topicLabel} • ${modeLabel}`);
+
+  if (input) input.value = "";
+
+  const submitButton = form?.querySelector("button[type='submit']");
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Pensando...";
+  }
+
+  addFullStudyMessage(
+    "assistant",
+    "Analisando sua dúvida com foco em precisão. Um segundo...",
+    "DilsAI"
+  );
+
+  try {
+    const data = await askDilsAI({
+      message,
+      userName: "Dilson",
+      topic: selectedTopic,
+      mode: selectedMode,
+      context: enrichedContext,
+    });
+
+    const { messages } = getFullStudyElements();
+    const lastMessage = messages?.lastElementChild;
+    if (lastMessage?.classList.contains("study-app__message--assistant")) {
+      lastMessage.remove();
+    }
+
+    const metaParts = [];
+    if (data.topic) metaParts.push(`Tema: ${data.topic}`);
+    if (data.mode) metaParts.push(`Modo: ${data.mode}`);
+    if (data.used_context) metaParts.push("Usou contexto");
+
+    addFullStudyMessage(
+      "assistant",
+      data.answer || "Recebi, mas a API não retornou resposta.",
+      metaParts.join(" • ") || "DilsAI"
+    );
+  } catch (error) {
+    const { messages } = getFullStudyElements();
+    const lastMessage = messages?.lastElementChild;
+    if (lastMessage?.classList.contains("study-app__message--assistant")) {
+      lastMessage.remove();
+    }
+
+    addFullStudyMessage(
+      "assistant",
+      `Não consegui falar com a API agora. Verifique se o backend está rodando em ${window.API_BASE}. Erro: ${error.message}`,
+      "Erro de conexão"
+    );
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = "Enviar";
+    }
+  }
+}
+
+function bindFullStudyChatEvents() {
+  ensureFullStudyWelcome();
+
+  document.addEventListener("click", (event) => {
+    const openButton = event.target.closest("[data-open-study-chat]");
+    if (openButton) {
+      event.preventDefault();
+      openFullStudyChat();
+      return;
+    }
+
+    const clearButton = event.target.closest("[data-clear-study-chat]");
+    if (clearButton) {
+      event.preventDefault();
+      clearFullStudyChat();
+    }
+  });
+
+  document.addEventListener("submit", (event) => {
+    if (event.target && event.target.id === "dilsai-full-chat-form") {
+      handleFullStudySubmit(event);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      const active = document.activeElement;
+      if (active && active.id === "dilsai-full-input") {
+        const { form } = getFullStudyElements();
+        form?.requestSubmit();
+      }
+    }
+  });
+
+  console.log("[DilsAI Estudos] tela cheia ligada");
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bindFullStudyChatEvents);
+} else {
+  bindFullStudyChatEvents();
+}
+
