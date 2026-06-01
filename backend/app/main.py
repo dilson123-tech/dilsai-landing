@@ -66,6 +66,10 @@ async def chat(payload: ChatRequest) -> ChatResponse:
         used_context=used_context,
         confidence=confidence,
         safety_notice=safety_notice,
+        source_title=knowledge.title if knowledge.found else None,
+        source_path=knowledge.source_path if knowledge.found else None,
+        source_type="internal_markdown" if knowledge.found else None,
+        source_score=knowledge.score if knowledge.found else None,
     )
 
 
