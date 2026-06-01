@@ -414,6 +414,7 @@ async function handleChatSubmit(event) {
     if (data.topic) metaParts.push(`Tema: ${data.topic}`);
     if (data.mode) metaParts.push(`Modo: ${data.mode}`);
     if (data.confidence) metaParts.push(`Confiança: ${data.confidence}`);
+    if (data.source_title) metaParts.push(`Fonte: ${data.source_title}`);
     if (data.safety_notice) metaParts.push(data.safety_notice);
 
     addMessage("ai", data.response || "(sem resposta)", metaParts.join(" • "));
@@ -601,6 +602,7 @@ async function handleFullStudySubmit(event) {
     if (data.topic) metaParts.push(`Tema: ${data.topic}`);
     if (data.mode) metaParts.push(`Modo: ${data.mode}`);
     if (data.used_context) metaParts.push("Usou contexto");
+    if (data.source_title) metaParts.push(`Fonte: ${data.source_title}`);
 
     addFullStudyMessage(
       "assistant",
