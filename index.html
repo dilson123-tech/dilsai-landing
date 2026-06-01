@@ -46,7 +46,8 @@
       <h1>DilsAI — Inteligência com alma, feita no Brasil para o mundo.</h1>
       <p>Seu assistente pessoal e profissional: texto, ideias, automação e produtividade em um só lugar.</p>
       <div class="hero__cta">
-        <button type="button" class="btn btn--primary" data-ask>Experimente agora</button>
+        <button type="button" class="btn btn--primary" data-open-study-chat>Estudar em tela cheia</button>
+        <button type="button" class="btn btn--ghost" data-ask>Chat rápido</button>
         <a href="#plans" class="btn btn--quiet">Ver planos</a>
       </div>
     </div>
@@ -124,6 +125,90 @@
       <h2>Pronta pra testar o DilsAI?</h2>
       <p>Em segundos você já está conversando com sua IA com alma.</p>
       <a href="#" class="btn btn--primary">Entrar / Criar conta</a>
+    </div>
+  </section>
+
+
+  <section id="dilsai-study-app" class="study-app" aria-labelledby="dilsai-study-title">
+    <div class="container study-app__inner">
+      <aside class="study-app__sidebar" aria-label="Configurações do estudo">
+        <div class="study-app__badge">DilsAI Estudos</div>
+        <h2 id="dilsai-study-title">Estude com IA em tela cheia</h2>
+        <p>
+          Escolha nível, matéria e modo. Para máxima precisão, cole seu material,
+          questão, trecho de apostila ou contexto antes de perguntar.
+        </p>
+
+        <label class="study-app__field" for="dilsai-full-level">
+          <span>Nível</span>
+          <select id="dilsai-full-level">
+            <option value="geral">Geral</option>
+            <option value="fundamental_1">Ensino Fundamental I</option>
+            <option value="fundamental_2">Ensino Fundamental II</option>
+            <option value="ensino_medio">Ensino Médio</option>
+            <option value="tecnico">Curso Técnico</option>
+            <option value="concurso">Concurso</option>
+            <option value="universidade">Universidade</option>
+          </select>
+        </label>
+
+        <label class="study-app__field" for="dilsai-full-topic">
+          <span>Matéria</span>
+          <select id="dilsai-full-topic">
+            <option value="geral">Geral</option>
+            <option value="matematica_logica">Matemática e lógica</option>
+            <option value="portugues">Português</option>
+            <option value="redacao">Redação</option>
+            <option value="programacao">Programação</option>
+            <option value="informatica">Informática</option>
+            <option value="direito">Direito</option>
+            <option value="administracao">Administração</option>
+            <option value="fisica">Física</option>
+            <option value="quimica">Química</option>
+            <option value="biologia">Biologia</option>
+            <option value="historia">História</option>
+            <option value="geografia">Geografia</option>
+            <option value="ingles">Inglês</option>
+          </select>
+        </label>
+
+        <label class="study-app__field" for="dilsai-full-mode">
+          <span>Modo</span>
+          <select id="dilsai-full-mode">
+            <option value="professor">Professor</option>
+            <option value="resumo">Resumo</option>
+            <option value="simulado">Simulado</option>
+            <option value="revisao">Revisão</option>
+            <option value="passo_a_passo">Passo a passo</option>
+          </select>
+        </label>
+
+        <label class="study-app__field" for="dilsai-full-context">
+          <span>Material/contexto opcional</span>
+          <textarea id="dilsai-full-context" rows="7" placeholder="Cole aqui a questão, trecho da apostila, resumo da aula ou material enviado pelo aluno."></textarea>
+        </label>
+
+        <div class="study-app__notice">
+          Precisão acima de resposta bonita. Se depender de material específico, envie o material.
+        </div>
+      </aside>
+
+      <div class="study-app__chat" aria-label="Chat de estudos DilsAI">
+        <div class="study-app__chat-header">
+          <div>
+            <strong>Professor DilsAI</strong>
+            <span>Plataforma de estudos com IA</span>
+          </div>
+          <button type="button" class="study-app__clear" data-clear-study-chat>Limpar conversa</button>
+        </div>
+
+        <div id="dilsai-full-messages" class="study-app__messages" aria-live="polite"></div>
+
+        <form id="dilsai-full-chat-form" class="study-app__form">
+          <textarea id="dilsai-full-input" rows="2" placeholder="Digite sua dúvida de estudo..." autocomplete="off"></textarea>
+          <button type="submit">Enviar</button>
+        </form>
+      </div>
     </div>
   </section>
 
