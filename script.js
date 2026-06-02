@@ -378,12 +378,13 @@ function formatDilsAISourceLabel(data) {
   const sourceTypeLabels = {
     internal_markdown: "Base interna DilsAI",
     user_uploaded_pdf_text: "PDF enviado pelo aluno",
+    user_uploaded_pdf_ocr: "PDF escaneado via OCR enviado pelo aluno",
     user_uploaded_text: "Texto enviado pelo aluno",
     user_uploaded_markdown: "Markdown enviado pelo aluno",
     user_uploaded_image_ocr: "Imagem enviada pelo aluno",
   };
 
-  const label = sourceTypeLabels[sourceType] || "Fonte";
+  const label = sourceTypeLabels[sourceType] || "Material informado";
 
   return `${label}: ${title}`;
 }
@@ -479,7 +480,7 @@ async function handleChatSubmit(event) {
     if (data.mode) metaParts.push(`Modo: ${data.mode}`);
     if (data.confidence) metaParts.push(`Confiança: ${data.confidence}`);
     const sourceLabel = formatDilsAISourceLabel(data);
-    if (sourceLabel) metaParts.push(`Fonte: ${sourceLabel}`);
+    if (sourceLabel) metaParts.push(sourceLabel.toLowerCase().startsWith("fonte:") ? sourceLabel : `Fonte: ${sourceLabel}`);
     if (data.safety_notice) metaParts.push(data.safety_notice);
 
     addMessage("ai", data.response || "(sem resposta)", metaParts.join(" • "));
@@ -772,7 +773,9 @@ async function handleFullMaterialFileChange(event) {
 
       cleanContent = String(extracted?.text || "").trim();
       headerType = isPdf
-        ? `PDF textual extraído pelo backend (${extracted?.page_count || 0} página(s))`
+        ? extracted?.source_type === "pdf_ocr"
+          ? `PDF escaneado convertido para imagem e processado por OCR (${extracted?.page_count || 0} página(s))`
+          : `PDF textual extraído pelo backend (${extracted?.page_count || 0} página(s))`
         : "OCR de imagem executado pelo backend";
 
       if (!cleanContent) {
@@ -785,7 +788,9 @@ async function handleFullMaterialFileChange(event) {
       }
 
       statusMessage = isPdf
-        ? `PDF extraído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`
+        ? extracted?.source_type === "pdf_ocr"
+          ? `PDF escaneado processado por OCR: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`
+          : `PDF extraído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`
         : `OCR concluído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`;
     } else {
       const content = await file.text();
@@ -874,7 +879,7 @@ async function handleFullStudySubmit(event) {
     if (data.mode) metaParts.push(`Modo: ${data.mode}`);
     if (data.used_context) metaParts.push("Usou contexto");
     const sourceLabel = formatDilsAISourceLabel(data);
-    if (sourceLabel) metaParts.push(`Fonte: ${sourceLabel}`);
+    if (sourceLabel) metaParts.push(sourceLabel.toLowerCase().startsWith("fonte:") ? sourceLabel : `Fonte: ${sourceLabel}`);
 
     addFullStudyMessage(
       "assistant",
