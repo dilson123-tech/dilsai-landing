@@ -4,16 +4,80 @@ from app.services.knowledge import find_knowledge_context
 from app.services.prompts import build_system_prompt
 
 
+def _normalize_context_lines(context: str, max_lines: int = 8) -> list[str]:
+    lines: list[str] = []
+
+    for raw_line in context.splitlines():
+        line = raw_line.strip()
+
+        if not line:
+            continue
+
+        lower = line.lower()
+
+        # Remove cabeçalhos técnicos do upload para o fallback ficar mais limpo.
+        if lower.startswith("arquivo enviado pelo aluno:"):
+            continue
+        if lower.startswith("tamanho:"):
+            continue
+        if lower.startswith("tipo:"):
+            continue
+        if lower.startswith("--- página"):
+            continue
+
+        lines.append(line)
+
+        if len(lines) >= max_lines:
+            break
+
+    return lines
+
+
+def _context_excerpt(context: str, max_chars: int = 1400) -> str:
+    clean = context.strip()
+
+    if len(clean) <= max_chars:
+        return clean
+
+    return clean[:max_chars].rstrip() + "\n..."
+
+
+def _uploaded_context_fallback(payload: ChatRequest, user_context: str) -> str:
+    lines = _normalize_context_lines(user_context)
+    excerpt = _context_excerpt(user_context)
+
+    points = "\n".join(f"- {line}" for line in lines)
+
+    if not points:
+        points = "- O material foi enviado, mas não consegui extrair linhas claras para resumir."
+
+    return (
+        "A IA externa não pôde ser acionada neste momento, mas encontrei material enviado pelo aluno. "
+        "Abaixo está um apoio de estudo gerado de forma determinística a partir do contexto recebido, sem fingir consulta ao modelo externo.\n\n"
+        f"Pergunta do aluno: {payload.message}\n\n"
+        "Resumo preliminar do material:\n"
+        f"{points}\n\n"
+        "Trecho-base usado:\n"
+        f"{excerpt}\n\n"
+        "Observação: este é um fallback seguro. Quando a cota/chave da IA externa estiver disponível, "
+        "a resposta poderá ser reescrita de forma mais didática pelo modelo."
+    )
+
+
 def _fallback_response(
     payload: ChatRequest,
     has_api_key: bool,
     knowledge_context: str = "",
+    user_context: str = "",
 ) -> str:
     setup_notice = (
         "A IA real ainda não está configurada neste ambiente porque falta OPENAI_API_KEY. "
         if not has_api_key
         else ""
     )
+
+    if user_context:
+        return _uploaded_context_fallback(payload, user_context)
 
     if knowledge_context:
         return (
@@ -56,6 +120,7 @@ async def generate_study_answer(payload: ChatRequest, settings: Settings) -> str
             payload,
             has_api_key=False,
             knowledge_context=knowledge_context,
+            user_context=user_context,
         )
 
     try:
@@ -94,6 +159,7 @@ async def generate_study_answer(payload: ChatRequest, settings: Settings) -> str
                 payload,
                 has_api_key=True,
                 knowledge_context=knowledge_context,
+                user_context=user_context,
             )
 
         return content
@@ -103,4 +169,5 @@ async def generate_study_answer(payload: ChatRequest, settings: Settings) -> str
             payload,
             has_api_key=True,
             knowledge_context=knowledge_context,
+            user_context=user_context,
         )

@@ -112,7 +112,9 @@ async def extract_material_text(request: Request) -> dict:
 async def chat(payload: ChatRequest) -> ChatResponse:
     knowledge = find_knowledge_context(payload)
     answer = await generate_study_answer(payload=payload, settings=settings)
-    used_context = bool(payload.context and payload.context.strip()) or knowledge.found
+    has_user_context = bool(payload.context and payload.context.strip())
+    used_context = has_user_context or knowledge.found
+    use_internal_source = knowledge.found and not has_user_context
 
     safety_notice = None
     confidence = "general"
@@ -131,10 +133,10 @@ async def chat(payload: ChatRequest) -> ChatResponse:
         used_context=used_context,
         confidence=confidence,
         safety_notice=safety_notice,
-        source_title=knowledge.title if knowledge.found else None,
-        source_path=knowledge.source_path if knowledge.found else None,
-        source_type="internal_markdown" if knowledge.found else None,
-        source_score=knowledge.score if knowledge.found else None,
+        source_title=knowledge.title if use_internal_source else None,
+        source_path=knowledge.source_path if use_internal_source else None,
+        source_type="internal_markdown" if use_internal_source else None,
+        source_score=knowledge.score if use_internal_source else None,
     )
 
 
