@@ -35,6 +35,14 @@ def extract_user_material_source(context: str | None) -> tuple[str | None, str |
         or "pdf textual extraido" in context_lower
     ):
         source_type = "user_uploaded_pdf_text"
+    elif (
+        title_lower.endswith(".png")
+        or title_lower.endswith(".jpg")
+        or title_lower.endswith(".jpeg")
+        or title_lower.endswith(".webp")
+        or "ocr de imagem" in context_lower
+    ):
+        source_type = "user_uploaded_image_ocr"
     elif title_lower.endswith(".md"):
         source_type = "user_uploaded_markdown"
     elif title_lower.endswith(".txt"):
@@ -82,14 +90,12 @@ async def health() -> dict:
 
 @app.post("/api/v1/materials/extract-text")
 async def extract_material_text(request: Request) -> dict:
-    content_type = request.headers.get("content-type", "")
-    file_name = request.headers.get("x-file-name", "material.pdf")
-
-    if "application/pdf" not in content_type:
-        raise HTTPException(status_code=415, detail="Apenas PDF é aceito neste endpoint.")
-
+    raw_content_type = request.headers.get("content-type", "")
+    content_type = raw_content_type.split(";", 1)[0].strip().lower()
+    file_name = request.headers.get("x-file-name", "material")
     data = await request.body()
-    max_bytes = 2_500_000
+
+    max_bytes = 5_000_000
 
     if not data:
         raise HTTPException(status_code=400, detail="Arquivo vazio.")
@@ -97,50 +103,96 @@ async def extract_material_text(request: Request) -> dict:
     if len(data) > max_bytes:
         raise HTTPException(
             status_code=413,
-            detail="PDF muito grande para o upload simples V1. Use um arquivo menor.",
+            detail="Arquivo muito grande para o upload OCR/PDF simples V1. Use um arquivo menor.",
         )
 
-    if not data.startswith(b"%PDF"):
-        raise HTTPException(status_code=400, detail="Arquivo não parece ser um PDF válido.")
+    image_types = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
 
-    try:
-        from pypdf import PdfReader
+    if content_type == "application/pdf":
+        if not data.startswith(b"%PDF"):
+            raise HTTPException(status_code=400, detail="Arquivo não parece ser um PDF válido.")
 
-        reader = PdfReader(BytesIO(data))
-        page_texts: list[str] = []
+        try:
+            from pypdf import PdfReader
 
-        for index, page in enumerate(reader.pages, start=1):
-            text = page.extract_text() or ""
-            clean_text = text.strip()
-            if clean_text:
-                page_texts.append(f"--- Página {index} ---\n{clean_text}")
+            reader = PdfReader(BytesIO(data))
+            page_texts: list[str] = []
 
-        extracted_text = "\n\n".join(page_texts).strip()
+            for index, page in enumerate(reader.pages, start=1):
+                text = page.extract_text() or ""
+                clean_text = text.strip()
+                if clean_text:
+                    page_texts.append(f"--- Página {index} ---\n{clean_text}")
 
-        warning = None
-        if not extracted_text:
-            warning = (
-                "Não foi possível extrair texto deste PDF. "
-                "Ele pode ser escaneado/imagem e exigir OCR em ciclo futuro."
-            )
+            extracted_text = "\n\n".join(page_texts).strip()
 
-        return {
-            "status": "success",
-            "file_name": file_name,
-            "source_type": "pdf_text",
-            "page_count": len(reader.pages),
-            "char_count": len(extracted_text),
-            "text": extracted_text,
-            "warning": warning,
-        }
+            warning = None
+            if not extracted_text:
+                warning = (
+                    "Não foi possível extrair texto deste PDF. "
+                    "Ele pode ser escaneado/imagem e exigir OCR em ciclo futuro."
+                )
 
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Não foi possível extrair texto do PDF: {str(exc)[:180]}",
-        ) from exc
+            return {
+                "status": "success",
+                "file_name": file_name,
+                "source_type": "pdf_text",
+                "page_count": len(reader.pages),
+                "char_count": len(extracted_text),
+                "text": extracted_text,
+                "warning": warning,
+            }
+
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Não foi possível extrair texto do PDF: {str(exc)[:180]}",
+            ) from exc
+
+    if content_type in image_types:
+        try:
+            from PIL import Image
+            import pytesseract
+            from pytesseract import TesseractNotFoundError
+
+            image = Image.open(BytesIO(data))
+            text = pytesseract.image_to_string(image, lang="por+eng")
+            extracted_text = (text or "").strip()
+
+            warning = None
+            if not extracted_text:
+                warning = (
+                    "Não foi possível extrair texto legível desta imagem. "
+                    "A qualidade pode estar baixa, sem contraste ou sem texto."
+                )
+
+            return {
+                "status": "success",
+                "file_name": file_name,
+                "source_type": "image_ocr",
+                "page_count": None,
+                "char_count": len(extracted_text),
+                "text": extracted_text,
+                "warning": warning,
+            }
+
+        except TesseractNotFoundError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="OCR indisponível: Tesseract não está instalado no sistema.",
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Não foi possível executar OCR na imagem: {str(exc)[:180]}",
+            ) from exc
+
+    raise HTTPException(
+        status_code=415,
+        detail="Tipo de arquivo não suportado. Use PDF textual ou imagem PNG/JPG/JPEG/WEBP.",
+    )
 
 
 @app.post("/api/v1/chat", response_model=ChatResponse)
