@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from io import BytesIO
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
@@ -41,6 +43,69 @@ async def health() -> dict:
         "version": settings.app_version,
         "environment": settings.app_env,
     }
+
+
+@app.post("/api/v1/materials/extract-text")
+async def extract_material_text(request: Request) -> dict:
+    content_type = request.headers.get("content-type", "")
+    file_name = request.headers.get("x-file-name", "material.pdf")
+
+    if "application/pdf" not in content_type:
+        raise HTTPException(status_code=415, detail="Apenas PDF é aceito neste endpoint.")
+
+    data = await request.body()
+    max_bytes = 2_500_000
+
+    if not data:
+        raise HTTPException(status_code=400, detail="Arquivo vazio.")
+
+    if len(data) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail="PDF muito grande para o upload simples V1. Use um arquivo menor.",
+        )
+
+    if not data.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="Arquivo não parece ser um PDF válido.")
+
+    try:
+        from pypdf import PdfReader
+
+        reader = PdfReader(BytesIO(data))
+        page_texts: list[str] = []
+
+        for index, page in enumerate(reader.pages, start=1):
+            text = page.extract_text() or ""
+            clean_text = text.strip()
+            if clean_text:
+                page_texts.append(f"--- Página {index} ---\n{clean_text}")
+
+        extracted_text = "\n\n".join(page_texts).strip()
+
+        warning = None
+        if not extracted_text:
+            warning = (
+                "Não foi possível extrair texto deste PDF. "
+                "Ele pode ser escaneado/imagem e exigir OCR em ciclo futuro."
+            )
+
+        return {
+            "status": "success",
+            "file_name": file_name,
+            "source_type": "pdf_text",
+            "page_count": len(reader.pages),
+            "char_count": len(extracted_text),
+            "text": extracted_text,
+            "warning": warning,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Não foi possível extrair texto do PDF: {str(exc)[:180]}",
+        ) from exc
 
 
 @app.post("/api/v1/chat", response_model=ChatResponse)

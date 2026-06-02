@@ -15,6 +15,7 @@ window.API_BASE = DILSAI_IS_LOCAL
   : DILSAI_PROD_API;
 
 window.ASK_URL = `${window.API_BASE}/api/v1/chat`;
+window.MATERIAL_EXTRACT_URL = `${window.API_BASE}/api/v1/materials/extract-text`;
 
 console.log("[DilsAI Estudos] Ambiente:", DILSAI_IS_LOCAL ? "LOCAL" : "PRODUÇÃO");
 console.log("[DilsAI Estudos] Endpoint:", window.ASK_URL);
@@ -617,8 +618,10 @@ function isAllowedSimpleMaterialFile(file) {
   return (
     name.endsWith(".txt") ||
     name.endsWith(".md") ||
+    name.endsWith(".pdf") ||
     type === "text/plain" ||
-    type === "text/markdown"
+    type === "text/markdown" ||
+    type === "application/pdf"
   );
 }
 
@@ -644,6 +647,41 @@ function clearFullMaterialUpload() {
   setFullMaterialStatus("Material carregado removido.", "info");
 }
 
+
+function isPdfMaterialFile(file) {
+  if (!file) return false;
+
+  const name = String(file.name || "").toLowerCase();
+  const type = String(file.type || "").toLowerCase();
+
+  return name.endsWith(".pdf") || type === "application/pdf";
+}
+
+async function extractPdfMaterialText(file) {
+  const response = await fetch(window.MATERIAL_EXTRACT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/pdf",
+      "X-File-Name": encodeURIComponent(file.name || "material.pdf"),
+    },
+    body: file,
+  });
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const detail = data?.detail || `HTTP ${response.status}`;
+    throw new Error(detail);
+  }
+
+  return data;
+}
+
 async function handleFullMaterialFileChange(event) {
   const file = event.target?.files?.[0];
   const { context } = getFullStudyElements();
@@ -652,7 +690,7 @@ async function handleFullMaterialFileChange(event) {
 
   if (!isAllowedSimpleMaterialFile(file)) {
     event.target.value = "";
-    setFullMaterialStatus("Arquivo recusado. Use somente .txt ou .md neste ciclo.", "error");
+    setFullMaterialStatus("Arquivo recusado. Use somente .txt, .md ou PDF textual neste ciclo.", "error");
     return;
   }
 
@@ -666,29 +704,50 @@ async function handleFullMaterialFileChange(event) {
   }
 
   try {
-    const content = await file.text();
-    const cleanContent = String(content || "").trim();
+    const isPdf = isPdfMaterialFile(file);
+    let cleanContent = "";
+    let headerType = "material simples carregado localmente no navegador";
+    let statusMessage = `Material carregado: ${file.name} (${formatMaterialFileSize(file.size)}).`;
 
-    if (!cleanContent) {
-      event.target.value = "";
-      setFullMaterialStatus("Arquivo vazio. Selecione um .txt ou .md com conteúdo.", "error");
-      return;
+    if (isPdf) {
+      setFullMaterialStatus(`Extraindo texto do PDF: ${file.name}...`, "info");
+      const extracted = await extractPdfMaterialText(file);
+
+      cleanContent = String(extracted?.text || "").trim();
+      headerType = `PDF textual extraído pelo backend (${extracted?.page_count || 0} página(s))`;
+
+      if (!cleanContent) {
+        event.target.value = "";
+        setFullMaterialStatus(
+          extracted?.warning || "PDF sem texto extraível. PDF escaneado/imagem exige OCR em ciclo futuro.",
+          "error"
+        );
+        return;
+      }
+
+      statusMessage = `PDF extraído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`;
+    } else {
+      const content = await file.text();
+      cleanContent = String(content || "").trim();
+
+      if (!cleanContent) {
+        event.target.value = "";
+        setFullMaterialStatus("Arquivo vazio. Selecione um .txt ou .md com conteúdo.", "error");
+        return;
+      }
     }
 
     const header = [
       `Arquivo enviado pelo aluno: ${file.name}`,
       `Tamanho: ${formatMaterialFileSize(file.size)}`,
-      "Tipo: material simples carregado localmente no navegador",
+      `Tipo: ${headerType}`,
     ].join("\n");
 
     context.value = `${header}\n\n${cleanContent}`;
     context.dataset.loadedFileName = file.name;
     context.dataset.loadedFileSize = String(file.size);
 
-    setFullMaterialStatus(
-      `Material carregado: ${file.name} (${formatMaterialFileSize(file.size)}).`,
-      "success"
-    );
+    setFullMaterialStatus(statusMessage, "success");
   } catch (error) {
     event.target.value = "";
     setFullMaterialStatus(`Não consegui ler o arquivo. Erro: ${error.message}`, "error");
