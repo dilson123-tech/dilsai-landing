@@ -380,6 +380,7 @@ function formatDilsAISourceLabel(data) {
     user_uploaded_pdf_text: "PDF enviado pelo aluno",
     user_uploaded_text: "Texto enviado pelo aluno",
     user_uploaded_markdown: "Markdown enviado pelo aluno",
+    user_uploaded_image_ocr: "Imagem enviada pelo aluno",
   };
 
   const label = sourceTypeLabels[sourceType] || "Fonte";
@@ -641,9 +642,16 @@ function isAllowedSimpleMaterialFile(file) {
     name.endsWith(".txt") ||
     name.endsWith(".md") ||
     name.endsWith(".pdf") ||
+    name.endsWith(".png") ||
+    name.endsWith(".jpg") ||
+    name.endsWith(".jpeg") ||
+    name.endsWith(".webp") ||
     type === "text/plain" ||
     type === "text/markdown" ||
-    type === "application/pdf"
+    type === "application/pdf" ||
+    type === "image/png" ||
+    type === "image/jpeg" ||
+    type === "image/webp"
   );
 }
 
@@ -679,12 +687,31 @@ function isPdfMaterialFile(file) {
   return name.endsWith(".pdf") || type === "application/pdf";
 }
 
-async function extractPdfMaterialText(file) {
+
+function isImageMaterialFile(file) {
+  if (!file) return false;
+
+  const name = String(file.name || "").toLowerCase();
+  const type = String(file.type || "").toLowerCase();
+
+  return (
+    name.endsWith(".png") ||
+    name.endsWith(".jpg") ||
+    name.endsWith(".jpeg") ||
+    name.endsWith(".webp") ||
+    type === "image/png" ||
+    type === "image/jpeg" ||
+    type === "image/webp"
+  );
+}
+
+
+async function extractBackendMaterialText(file) {
   const response = await fetch(window.MATERIAL_EXTRACT_URL, {
     method: "POST",
     headers: {
-      "Content-Type": "application/pdf",
-      "X-File-Name": encodeURIComponent(file.name || "material.pdf"),
+      "Content-Type": file.type || "application/octet-stream",
+      "X-File-Name": encodeURIComponent(file.name || "material"),
     },
     body: file,
   });
@@ -704,6 +731,10 @@ async function extractPdfMaterialText(file) {
   return data;
 }
 
+async function extractPdfMaterialText(file) {
+  return extractBackendMaterialText(file);
+}
+
 async function handleFullMaterialFileChange(event) {
   const file = event.target?.files?.[0];
   const { context } = getFullStudyElements();
@@ -712,7 +743,7 @@ async function handleFullMaterialFileChange(event) {
 
   if (!isAllowedSimpleMaterialFile(file)) {
     event.target.value = "";
-    setFullMaterialStatus("Arquivo recusado. Use somente .txt, .md ou PDF textual neste ciclo.", "error");
+    setFullMaterialStatus("Arquivo recusado. Use .txt, .md, PDF textual ou imagem PNG/JPG/WEBP neste ciclo.", "error");
     return;
   }
 
@@ -727,27 +758,35 @@ async function handleFullMaterialFileChange(event) {
 
   try {
     const isPdf = isPdfMaterialFile(file);
+    const isImage = isImageMaterialFile(file);
     let cleanContent = "";
     let headerType = "material simples carregado localmente no navegador";
     let statusMessage = `Material carregado: ${file.name} (${formatMaterialFileSize(file.size)}).`;
 
-    if (isPdf) {
-      setFullMaterialStatus(`Extraindo texto do PDF: ${file.name}...`, "info");
-      const extracted = await extractPdfMaterialText(file);
+    if (isPdf || isImage) {
+      setFullMaterialStatus(
+        isPdf ? `Extraindo texto do PDF: ${file.name}...` : `Executando OCR na imagem: ${file.name}...`,
+        "info"
+      );
+      const extracted = await extractBackendMaterialText(file);
 
       cleanContent = String(extracted?.text || "").trim();
-      headerType = `PDF textual extraído pelo backend (${extracted?.page_count || 0} página(s))`;
+      headerType = isPdf
+        ? `PDF textual extraído pelo backend (${extracted?.page_count || 0} página(s))`
+        : "OCR de imagem executado pelo backend";
 
       if (!cleanContent) {
         event.target.value = "";
         setFullMaterialStatus(
-          extracted?.warning || "PDF sem texto extraível. PDF escaneado/imagem exige OCR em ciclo futuro.",
+          extracted?.warning || "Não foi possível extrair texto deste arquivo.",
           "error"
         );
         return;
       }
 
-      statusMessage = `PDF extraído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`;
+      statusMessage = isPdf
+        ? `PDF extraído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`
+        : `OCR concluído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`;
     } else {
       const content = await file.text();
       cleanContent = String(content || "").trim();
