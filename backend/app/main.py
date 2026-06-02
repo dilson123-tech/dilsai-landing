@@ -8,6 +8,41 @@ from app.schemas import ChatRequest, ChatResponse
 from app.services.knowledge import find_knowledge_context
 from app.services.llm import generate_study_answer
 
+
+def extract_user_material_source(context: str | None) -> tuple[str | None, str | None]:
+    if not context or not context.strip():
+        return None, None
+
+    title = "Material enviado pelo aluno"
+    source_type = "user_uploaded_text"
+
+    for raw_line in context.splitlines():
+        line = raw_line.strip()
+        lower = line.lower()
+
+        if lower.startswith("arquivo enviado pelo aluno:"):
+            candidate = line.split(":", 1)[1].strip()
+            if candidate:
+                title = candidate
+            break
+
+    context_lower = context.lower()
+    title_lower = title.lower()
+
+    if (
+        title_lower.endswith(".pdf")
+        or "pdf textual extraído" in context_lower
+        or "pdf textual extraido" in context_lower
+    ):
+        source_type = "user_uploaded_pdf_text"
+    elif title_lower.endswith(".md"):
+        source_type = "user_uploaded_markdown"
+    elif title_lower.endswith(".txt"):
+        source_type = "user_uploaded_text"
+
+    return title, source_type
+
+
 settings = get_settings()
 
 app = FastAPI(
@@ -113,7 +148,9 @@ async def chat(payload: ChatRequest) -> ChatResponse:
     knowledge = find_knowledge_context(payload)
     answer = await generate_study_answer(payload=payload, settings=settings)
     has_user_context = bool(payload.context and payload.context.strip())
+    user_source_title, user_source_type = extract_user_material_source(payload.context)
     used_context = has_user_context or knowledge.found
+    use_user_source = has_user_context and bool(user_source_title)
     use_internal_source = knowledge.found and not has_user_context
 
     safety_notice = None
@@ -133,10 +170,10 @@ async def chat(payload: ChatRequest) -> ChatResponse:
         used_context=used_context,
         confidence=confidence,
         safety_notice=safety_notice,
-        source_title=knowledge.title if use_internal_source else None,
-        source_path=knowledge.source_path if use_internal_source else None,
-        source_type="internal_markdown" if use_internal_source else None,
-        source_score=knowledge.score if use_internal_source else None,
+        source_title=user_source_title if use_user_source else knowledge.title if use_internal_source else None,
+        source_path=None if use_user_source else knowledge.source_path if use_internal_source else None,
+        source_type=user_source_type if use_user_source else "internal_markdown" if use_internal_source else None,
+        source_score=None if use_user_source else knowledge.score if use_internal_source else None,
     )
 
 
