@@ -491,3 +491,22 @@ input:checked + .slider:before{transform:translateX(20px)}
   color: #b91c1c;
 }
 
+/* === DilsAI Estudos — Clear Material Upload V1 === */
+.study-app__clear-material {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #334155;
+  font-weight: 900;
+  font-size: 13px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.study-app__clear-material:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
