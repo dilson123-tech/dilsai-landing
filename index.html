@@ -196,6 +196,16 @@
           <textarea id="dilsai-full-context" rows="7" autocomplete="off" data-lpignore="true" data-form-type="other" placeholder="Cole aqui a questão, trecho da apostila, resumo da aula ou material enviado pelo aluno."></textarea>
         </label>
 
+        <div class="study-app__field study-app__field--upload">
+          <span>Enviar material simples</span>
+          <label class="study-app__upload-box" for="dilsai-full-material-file">
+            <strong>Selecionar arquivo .txt ou .md</strong>
+            <small>O conteúdo será carregado no campo de contexto. PDF/OCR ficam para próximo ciclo.</small>
+          </label>
+          <input id="dilsai-full-material-file" class="study-app__file-input" type="file" accept=".txt,.md,text/plain,text/markdown" />
+          <div id="dilsai-full-material-status" class="study-app__upload-status" aria-live="polite"></div>
+        </div>
+
         <div class="study-app__notice">
           Precisão acima de resposta bonita. Se depender de material específico, envie o material.
         </div>

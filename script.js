@@ -525,6 +525,8 @@ function getFullStudyElements() {
     topic: document.getElementById("dilsai-full-topic"),
     mode: document.getElementById("dilsai-full-mode"),
     context: document.getElementById("dilsai-full-context"),
+    materialFile: document.getElementById("dilsai-full-material-file"),
+    materialStatus: document.getElementById("dilsai-full-material-status"),
   };
 }
 
@@ -586,6 +588,90 @@ function clearFullStudyChat() {
   messages.dataset.welcome = "";
   ensureFullStudyWelcome();
 }
+
+
+const DILSAI_SIMPLE_MATERIAL_MAX_BYTES = 120000;
+
+function formatMaterialFileSize(size) {
+  if (!Number.isFinite(size)) return "";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function setFullMaterialStatus(message, type = "info") {
+  const { materialStatus } = getFullStudyElements();
+  if (!materialStatus) return;
+
+  materialStatus.textContent = message || "";
+  materialStatus.dataset.status = type;
+}
+
+function isAllowedSimpleMaterialFile(file) {
+  if (!file) return false;
+
+  const name = String(file.name || "").toLowerCase();
+  const type = String(file.type || "").toLowerCase();
+
+  return (
+    name.endsWith(".txt") ||
+    name.endsWith(".md") ||
+    type === "text/plain" ||
+    type === "text/markdown"
+  );
+}
+
+async function handleFullMaterialFileChange(event) {
+  const file = event.target?.files?.[0];
+  const { context } = getFullStudyElements();
+
+  if (!file || !context) return;
+
+  if (!isAllowedSimpleMaterialFile(file)) {
+    event.target.value = "";
+    setFullMaterialStatus("Arquivo recusado. Use somente .txt ou .md neste ciclo.", "error");
+    return;
+  }
+
+  if (file.size > DILSAI_SIMPLE_MATERIAL_MAX_BYTES) {
+    event.target.value = "";
+    setFullMaterialStatus(
+      `Arquivo muito grande (${formatMaterialFileSize(file.size)}). Limite atual: ${formatMaterialFileSize(DILSAI_SIMPLE_MATERIAL_MAX_BYTES)}.`,
+      "error"
+    );
+    return;
+  }
+
+  try {
+    const content = await file.text();
+    const cleanContent = String(content || "").trim();
+
+    if (!cleanContent) {
+      event.target.value = "";
+      setFullMaterialStatus("Arquivo vazio. Selecione um .txt ou .md com conteúdo.", "error");
+      return;
+    }
+
+    const header = [
+      `Arquivo enviado pelo aluno: ${file.name}`,
+      `Tamanho: ${formatMaterialFileSize(file.size)}`,
+      "Tipo: material simples carregado localmente no navegador",
+    ].join("\n");
+
+    context.value = `${header}\n\n${cleanContent}`;
+    context.dataset.loadedFileName = file.name;
+    context.dataset.loadedFileSize = String(file.size);
+
+    setFullMaterialStatus(
+      `Material carregado: ${file.name} (${formatMaterialFileSize(file.size)}).`,
+      "success"
+    );
+  } catch (error) {
+    event.target.value = "";
+    setFullMaterialStatus(`Não consegui ler o arquivo. Erro: ${error.message}`, "error");
+  }
+}
+
 
 async function handleFullStudySubmit(event) {
   event.preventDefault();
@@ -688,6 +774,12 @@ function bindFullStudyChatEvents() {
     if (clearButton) {
       event.preventDefault();
       clearFullStudyChat();
+    }
+  });
+
+  document.addEventListener("change", (event) => {
+    if (event.target && event.target.id === "dilsai-full-material-file") {
+      handleFullMaterialFileChange(event);
     }
   });
 

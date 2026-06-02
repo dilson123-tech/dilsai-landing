@@ -434,3 +434,60 @@ input:checked + .slider:before{transform:translateX(20px)}
   }
 }
 
+/* === DilsAI Estudos — Simple Material Upload V1 === */
+.study-app__field--upload {
+  margin-top: 16px;
+}
+
+.study-app__upload-box {
+  display: block;
+  border: 1px dashed #94a3b8;
+  border-radius: 18px;
+  padding: 14px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+
+.study-app__upload-box:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  transform: translateY(-1px);
+}
+
+.study-app__upload-box strong {
+  display: block;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.study-app__upload-box small {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.study-app__file-input {
+  width: 100%;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.study-app__upload-status {
+  min-height: 20px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #475569;
+}
+
+.study-app__upload-status[data-status="success"] {
+  color: #166534;
+}
+
+.study-app__upload-status[data-status="error"] {
+  color: #b91c1c;
+}
+
