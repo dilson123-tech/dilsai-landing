@@ -789,7 +789,7 @@ async function handleFullMaterialFileChange(event) {
 
       statusMessage = isPdf
         ? extracted?.source_type === "pdf_ocr"
-          ? `PDF escaneado processado por OCR: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`
+          ? `PDF escaneado processado por OCR: ${file.name} (${extracted.char_count || cleanContent.length} caracteres). OCR pode conter erros.`
           : `PDF extraído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`
         : `OCR concluído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`;
     } else {
@@ -803,11 +803,17 @@ async function handleFullMaterialFileChange(event) {
       }
     }
 
-    const header = [
+    const headerLines = [
       `Arquivo enviado pelo aluno: ${file.name}`,
       `Tamanho: ${formatMaterialFileSize(file.size)}`,
       `Tipo: ${headerType}`,
-    ].join("\n");
+    ];
+
+    if ((isPdf || isImage) && extracted?.warning) {
+      headerLines.push(`Aviso de extração: ${extracted.warning}`);
+    }
+
+    const header = headerLines.join("\n");
 
     context.value = `${header}\n\n${cleanContent}`;
     context.dataset.loadedFileName = file.name;

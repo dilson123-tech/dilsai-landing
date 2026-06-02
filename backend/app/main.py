@@ -59,6 +59,9 @@ def extract_user_material_source(context: str | None) -> tuple[str | None, str |
 
 settings = get_settings()
 
+SCANNED_PDF_OCR_MAX_PAGES = 3
+SCANNED_PDF_OCR_DPI = 220
+
 app = FastAPI(
     title=settings.app_name,
     description="API do DilsAI Estudos — IA de estudos com precisão, modos e resposta segura.",
@@ -95,13 +98,13 @@ async def health() -> dict:
 
 
 
-def _ocr_scanned_pdf_bytes(data: bytes, max_pages: int = 3) -> tuple[str, int]:
+def _ocr_scanned_pdf_bytes(data: bytes, max_pages: int = SCANNED_PDF_OCR_MAX_PAGES) -> tuple[str, int]:
     from pdf2image import convert_from_bytes
     import pytesseract
 
     images = convert_from_bytes(
         data,
-        dpi=220,
+        dpi=SCANNED_PDF_OCR_DPI,
         first_page=1,
         last_page=max_pages,
         fmt="png",
@@ -173,7 +176,8 @@ async def extract_material_text(request: Request) -> dict:
                 else:
                     warning = (
                         "PDF sem texto digital extraível. O conteúdo foi obtido por OCR inicial "
-                        f"nas primeiras {ocr_page_count} página(s). OCR pode conter erros."
+                        f"em {ocr_page_count} página(s), com limite operacional de "
+                        f"{SCANNED_PDF_OCR_MAX_PAGES} página(s). OCR pode conter erros."
                     )
 
             return {
@@ -184,6 +188,10 @@ async def extract_material_text(request: Request) -> dict:
                 "char_count": len(extracted_text),
                 "text": extracted_text,
                 "warning": warning,
+                "ocr_engine": "tesseract" if source_type == "pdf_ocr" else None,
+                "ocr_languages": "por+eng" if source_type == "pdf_ocr" else None,
+                "ocr_processed_pages": ocr_page_count if source_type == "pdf_ocr" else None,
+                "ocr_page_limit": SCANNED_PDF_OCR_MAX_PAGES if source_type == "pdf_ocr" else None,
             }
 
         except HTTPException:
@@ -219,6 +227,10 @@ async def extract_material_text(request: Request) -> dict:
                 "char_count": len(extracted_text),
                 "text": extracted_text,
                 "warning": warning,
+                "ocr_engine": "tesseract",
+                "ocr_languages": "por+eng",
+                "ocr_processed_pages": 1,
+                "ocr_page_limit": None,
             }
 
         except TesseractNotFoundError as exc:
