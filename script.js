@@ -527,6 +527,7 @@ function getFullStudyElements() {
     context: document.getElementById("dilsai-full-context"),
     materialFile: document.getElementById("dilsai-full-material-file"),
     materialStatus: document.getElementById("dilsai-full-material-status"),
+    materialClear: document.getElementById("dilsai-full-material-clear"),
   };
 }
 
@@ -619,6 +620,28 @@ function isAllowedSimpleMaterialFile(file) {
     type === "text/plain" ||
     type === "text/markdown"
   );
+}
+
+
+function clearFullMaterialUpload() {
+  const { context, materialFile } = getFullStudyElements();
+
+  if (context) {
+    const loadedFileName = context.dataset.loadedFileName || "";
+
+    if (loadedFileName) {
+      context.value = "";
+    }
+
+    delete context.dataset.loadedFileName;
+    delete context.dataset.loadedFileSize;
+  }
+
+  if (materialFile) {
+    materialFile.value = "";
+  }
+
+  setFullMaterialStatus("Material carregado removido.", "info");
 }
 
 async function handleFullMaterialFileChange(event) {
@@ -774,6 +797,13 @@ function bindFullStudyChatEvents() {
     if (clearButton) {
       event.preventDefault();
       clearFullStudyChat();
+      return;
+    }
+
+    const clearMaterialButton = event.target.closest("#dilsai-full-material-clear");
+    if (clearMaterialButton) {
+      event.preventDefault();
+      clearFullMaterialUpload();
     }
   });
 
