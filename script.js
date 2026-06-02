@@ -366,6 +366,27 @@ function ensureLauncher() {
   return launcher;
 }
 
+
+function formatDilsAISourceLabel(data) {
+  if (!data || !data.source_title) return "";
+
+  const title = String(data.source_title || "").trim();
+  const sourceType = String(data.source_type || "").trim();
+
+  if (!title) return "";
+
+  const sourceTypeLabels = {
+    internal_markdown: "Base interna DilsAI",
+    user_uploaded_pdf_text: "PDF enviado pelo aluno",
+    user_uploaded_text: "Texto enviado pelo aluno",
+    user_uploaded_markdown: "Markdown enviado pelo aluno",
+  };
+
+  const label = sourceTypeLabels[sourceType] || "Fonte";
+
+  return `${label}: ${title}`;
+}
+
 function addMessage(role, text, meta = "") {
   const messages = document.getElementById("dilsai-chat-messages");
   if (!messages) return;
@@ -456,7 +477,8 @@ async function handleChatSubmit(event) {
     if (data.topic) metaParts.push(`Tema: ${data.topic}`);
     if (data.mode) metaParts.push(`Modo: ${data.mode}`);
     if (data.confidence) metaParts.push(`Confiança: ${data.confidence}`);
-    if (data.source_title) metaParts.push(`Fonte: ${data.source_title}`);
+    const sourceLabel = formatDilsAISourceLabel(data);
+    if (sourceLabel) metaParts.push(`Fonte: ${sourceLabel}`);
     if (data.safety_notice) metaParts.push(data.safety_notice);
 
     addMessage("ai", data.response || "(sem resposta)", metaParts.join(" • "));
@@ -812,7 +834,8 @@ async function handleFullStudySubmit(event) {
     if (data.topic) metaParts.push(`Tema: ${data.topic}`);
     if (data.mode) metaParts.push(`Modo: ${data.mode}`);
     if (data.used_context) metaParts.push("Usou contexto");
-    if (data.source_title) metaParts.push(`Fonte: ${data.source_title}`);
+    const sourceLabel = formatDilsAISourceLabel(data);
+    if (sourceLabel) metaParts.push(`Fonte: ${sourceLabel}`);
 
     addFullStudyMessage(
       "assistant",
