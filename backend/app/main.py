@@ -30,6 +30,12 @@ def extract_user_material_source(context: str | None) -> tuple[str | None, str |
     title_lower = title.lower()
 
     if (
+        "pdf escaneado" in context_lower
+        or "ocr de pdf" in context_lower
+        or "pdf convertido para imagem" in context_lower
+    ):
+        source_type = "user_uploaded_pdf_ocr"
+    elif (
         title_lower.endswith(".pdf")
         or "pdf textual extraído" in context_lower
         or "pdf textual extraido" in context_lower
@@ -88,6 +94,31 @@ async def health() -> dict:
     }
 
 
+
+def _ocr_scanned_pdf_bytes(data: bytes, max_pages: int = 3) -> tuple[str, int]:
+    from pdf2image import convert_from_bytes
+    import pytesseract
+
+    images = convert_from_bytes(
+        data,
+        dpi=220,
+        first_page=1,
+        last_page=max_pages,
+        fmt="png",
+    )
+
+    page_texts: list[str] = []
+
+    for index, image in enumerate(images, start=1):
+        text = pytesseract.image_to_string(image, lang="por+eng")
+        clean_text = (text or "").strip()
+
+        if clean_text:
+            page_texts.append(f"--- Página {index} OCR ---\n{clean_text}")
+
+    return "\n\n".join(page_texts).strip(), len(images)
+
+
 @app.post("/api/v1/materials/extract-text")
 async def extract_material_text(request: Request) -> dict:
     raw_content_type = request.headers.get("content-type", "")
@@ -127,16 +158,28 @@ async def extract_material_text(request: Request) -> dict:
             extracted_text = "\n\n".join(page_texts).strip()
 
             warning = None
+            source_type = "pdf_text"
+
             if not extracted_text:
-                warning = (
-                    "Não foi possível extrair texto deste PDF. "
-                    "Ele pode ser escaneado/imagem e exigir OCR em ciclo futuro."
-                )
+                ocr_text, ocr_page_count = _ocr_scanned_pdf_bytes(data)
+                extracted_text = ocr_text
+                source_type = "pdf_ocr"
+
+                if not extracted_text:
+                    warning = (
+                        "Não foi possível extrair texto deste PDF nem via OCR inicial. "
+                        "O arquivo pode ter baixa qualidade, estar ilegível ou exigir pré-processamento."
+                    )
+                else:
+                    warning = (
+                        "PDF sem texto digital extraível. O conteúdo foi obtido por OCR inicial "
+                        f"nas primeiras {ocr_page_count} página(s). OCR pode conter erros."
+                    )
 
             return {
                 "status": "success",
                 "file_name": file_name,
-                "source_type": "pdf_text",
+                "source_type": source_type,
                 "page_count": len(reader.pages),
                 "char_count": len(extracted_text),
                 "text": extracted_text,
