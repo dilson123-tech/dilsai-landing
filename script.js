@@ -912,6 +912,100 @@ async function handleFullStudySubmit(event) {
   }
 }
 
+
+
+  function buildPastedImageFile(file, index = 0) {
+    if (!file) return null;
+
+    const extensionByType = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/webp": "webp",
+    };
+
+    const type = file.type || "image/png";
+    const extension = extensionByType[type] || "png";
+    const name = file.name || `print-colado-dilsai-${Date.now()}-${index + 1}.${extension}`;
+
+    try {
+      return new File([file], name, { type, lastModified: Date.now() });
+    } catch {
+      return file;
+    }
+  }
+
+
+  function getPastedImageFile(event) {
+    const clipboard = event.clipboardData;
+    if (!clipboard) return null;
+
+    const items = Array.from(clipboard.items || []);
+    for (const [index, item] of items.entries()) {
+      if (item?.kind === "file" && String(item.type || "").startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) return buildPastedImageFile(file, index);
+      }
+    }
+
+    const files = Array.from(clipboard.files || []);
+    const image = files.find((file) => String(file?.type || "").startsWith("image/"));
+    return image ? buildPastedImageFile(image, 0) : null;
+  }
+
+
+  function isFullStudyPasteTarget(target) {
+    if (!target) return false;
+
+    if (
+      target.id === "dilsai-full-input" ||
+      target.id === "dilsai-full-context" ||
+      target.id === "dilsai-full-messages"
+    ) {
+      return true;
+    }
+
+    return Boolean(target.closest?.("#dilsai-study-app"));
+  }
+
+
+  async function handleFullStudyPaste(event) {
+    if (!isFullStudyPasteTarget(event.target)) return;
+
+    const file = getPastedImageFile(event);
+    if (!file) return;
+
+    event.preventDefault();
+
+    setFullMaterialStatus(
+      "Print colado detectado. Executando OCR para transformar a imagem em contexto de estudo...",
+      "info"
+    );
+
+    const fakeEvent = {
+      target: {
+        files: [file],
+        value: "",
+      },
+    };
+
+    await handleFullMaterialFileChange(fakeEvent);
+
+    const { context } = getFullStudyElements();
+    if (context?.dataset?.loadedFileName === file.name) {
+      context.value = context.value
+        .replace("Arquivo enviado pelo aluno:", "Print colado pelo aluno:")
+        .replace("Tipo: OCR de imagem executado pelo backend", "Tipo: Print/imagem colada no chat e processada por OCR");
+
+      context.dataset.loadedFileSource = "clipboard_image_ocr";
+
+      setFullMaterialStatus(
+        `Print colado processado por OCR: ${file.name}. OCR pode conter erros.`,
+        "success"
+      );
+    }
+  }
+
+
 function bindFullStudyChatEvents() {
   populateFullStudyTaxonomyOptions();
   clearLeakedMetaContextIfNeeded();
@@ -944,6 +1038,10 @@ function bindFullStudyChatEvents() {
       handleFullMaterialFileChange(event);
     }
   });
+
+    document.addEventListener("paste", (event) => {
+      handleFullStudyPaste(event);
+    });
 
   document.addEventListener("submit", (event) => {
     if (event.target && event.target.id === "dilsai-full-chat-form") {
