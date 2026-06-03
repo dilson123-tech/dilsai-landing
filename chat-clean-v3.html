@@ -179,6 +179,29 @@
       line-height: 24px;
     }
 
+    .attachment-status {
+      position: absolute;
+      left: 5px;
+      right: 5px;
+      bottom: 5px;
+      padding: 4px 5px;
+      border-radius: 9px;
+      background: rgba(15, 23, 42, 0.78);
+      color: #ffffff;
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .attachment-status.ok {
+      background: rgba(22, 163, 74, 0.9);
+    }
+
+    .attachment-status.error {
+      background: rgba(220, 38, 38, 0.9);
+    }
+
+
     .input-row {
       display: grid;
       grid-template-columns: auto 1fr auto;
@@ -288,6 +311,9 @@
     const fileInput = document.getElementById("file");
     const attach = document.getElementById("attach");
 
+    const API_BASE = localStorage.getItem("DILSAI_API_BASE") || "http://127.0.0.1:8091";
+    const OCR_URL = `${API_BASE}/api/v1/materials/extract-text`;
+
     let pendingImages = [];
 
     function addMessage(role, text, meta = "") {
@@ -343,6 +369,15 @@
         img.alt = item.file.name || "print anexado";
         card.appendChild(img);
 
+        const status = document.createElement("div");
+        status.className = `attachment-status ${item.ocrStatus === "ok" ? "ok" : item.ocrStatus === "error" ? "error" : ""}`;
+        status.textContent = item.ocrStatus === "ok"
+          ? "OCR pronto"
+          : item.ocrStatus === "error"
+            ? "OCR falhou"
+            : "Lendo...";
+        card.appendChild(status);
+
         const remove = document.createElement("button");
         remove.type = "button";
         remove.textContent = "×";
@@ -358,16 +393,152 @@
       });
     }
 
+    function loadImageForOcr(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+
+        image.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(image);
+        };
+
+        image.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Não consegui carregar a imagem para OCR."));
+        };
+
+        image.src = url;
+      });
+    }
+
+    function canvasToOcrBlob(canvas, type, quality) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Não consegui preparar a imagem para OCR."));
+        }, type, quality);
+      });
+    }
+
+    async function prepareImageForOcr(file) {
+      const maxBytes = 1500 * 1024;
+
+      if (file.size <= maxBytes) return file;
+
+      const image = await loadImageForOcr(file);
+      let bestBlob = file;
+
+      const widths = [2200, 1800, 1500, 1200, 1000];
+      const qualities = [0.92, 0.86, 0.78, 0.70];
+
+      for (const maxWidth of widths) {
+        const scale = Math.min(1, maxWidth / image.width);
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0, width, height);
+
+        for (const quality of qualities) {
+          const blob = await canvasToOcrBlob(canvas, "image/jpeg", quality);
+
+          if (blob.size < bestBlob.size) bestBlob = blob;
+
+          if (blob.size <= maxBytes) {
+            return new File([blob], `ocr-print-dilsai-${Date.now()}.jpg`, {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            });
+          }
+        }
+      }
+
+      return new File([bestBlob], `ocr-print-dilsai-${Date.now()}.jpg`, {
+        type: "image/jpeg",
+        lastModified: Date.now(),
+      });
+    }
+
+    function cleanOcrText(rawText) {
+      return String(rawText || "")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .filter((line) => !/^dilsai estudos/i.test(line))
+        .filter((line) => !/^chat seco/i.test(line))
+        .filter((line) => !/^professor dilsai/i.test(line))
+        .filter((line) => !/^cole print/i.test(line))
+        .filter((line) => !/^cole um print/i.test(line))
+        .filter((line) => !/^digite aqui/i.test(line))
+        .filter((line) => !/^enviar$/i.test(line))
+        .filter((line) => !/^limpar$/i.test(line))
+        .join("\n")
+        .trim();
+    }
+
+    async function extractOcrText(file) {
+      const ocrFile = await prepareImageForOcr(file);
+
+      const response = await fetch(OCR_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": ocrFile.type || "application/octet-stream",
+          "X-File-Name": encodeURIComponent(ocrFile.name || file.name || "print"),
+        },
+        body: ocrFile,
+      });
+
+      let data = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.detail || `HTTP ${response.status}`);
+      }
+
+      return cleanOcrText(data?.text || "");
+    }
+
+    async function runOcrForPendingImage(item) {
+      try {
+        item.ocrText = await extractOcrText(item.file);
+        item.ocrStatus = item.ocrText ? "ok" : "error";
+        item.ocrError = item.ocrText ? "" : "OCR não encontrou texto útil.";
+      } catch (error) {
+        item.ocrText = "";
+        item.ocrStatus = "error";
+        item.ocrError = error.message;
+      }
+
+      renderPending();
+    }
+
+
     function addPendingImage(file) {
       if (!file || !String(file.type || "").startsWith("image/")) return;
 
-      pendingImages.push({
+      const item = {
         file,
         url: URL.createObjectURL(file),
-      });
+        ocrStatus: "pending",
+        ocrText: "",
+        ocrError: "",
+      };
+
+      pendingImages.push(item);
 
       renderPending();
       input.focus();
+
+      runOcrForPendingImage(item);
     }
 
     function getClipboardImage(event) {
@@ -455,6 +626,15 @@
 
       if (text) {
         addMessage("user", text, "Pergunta");
+      }
+
+      const ocrContext = pendingImages
+        .map((item) => item.ocrText)
+        .filter(Boolean)
+        .join("\n\n");
+
+      if (ocrContext) {
+        console.log("[DilsAI Chat Seco V3] OCR pronto para futura API:", ocrContext);
       }
 
       pendingImages.forEach((item) => URL.revokeObjectURL(item.url));
