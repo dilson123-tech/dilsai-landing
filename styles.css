@@ -510,3 +510,160 @@ input:checked + .slider:before{transform:translateX(20px)}
   border-color: #94a3b8;
 }
 
+
+
+/* === DilsAI Estudos — Commercial Landing V1 === */
+.hero--study {
+  background:
+    radial-gradient(circle at 14% 12%, rgba(0, 123, 255, .18), transparent 28%),
+    radial-gradient(circle at 86% 18%, rgba(111, 66, 193, .18), transparent 30%),
+    linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  padding: 86px 0 56px;
+}
+
+.hero__eyebrow,
+.section-heading span,
+.notice-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.hero--study h1 {
+  max-width: 920px;
+  font-size: clamp(36px, 6vw, 64px);
+  letter-spacing: -.04em;
+  color: #0f172a;
+}
+
+.hero--study p {
+  max-width: 780px;
+  color: #475569;
+  font-size: 20px;
+  line-height: 1.6;
+}
+
+.hero__cta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.hero__trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.hero__trust span {
+  display: inline-flex;
+  padding: 8px 11px;
+  border: 1px solid rgba(15, 23, 42, .10);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .80);
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .06);
+}
+
+.section-heading {
+  max-width: 760px;
+  margin-bottom: 26px;
+}
+
+.section-heading--center {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section-heading h2 {
+  margin: 0 0 10px;
+  color: #0f172a;
+  font-size: clamp(28px, 4vw, 42px);
+  letter-spacing: -.03em;
+}
+
+.section-heading p {
+  margin: 0;
+  color: #64748b;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.education-notice {
+  padding: 54px 0;
+  background: #0f172a;
+  color: #fff;
+}
+
+.education-notice__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr);
+  gap: 28px;
+  align-items: center;
+}
+
+.education-notice h2 {
+  margin: 0 0 12px;
+  font-size: clamp(28px, 4vw, 44px);
+  letter-spacing: -.03em;
+}
+
+.education-notice p {
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.7;
+  font-size: 17px;
+}
+
+.education-notice ul {
+  margin: 0;
+  padding: 22px 24px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .14);
+}
+
+.education-notice li {
+  margin: 9px 0;
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.notice-pill {
+  background: rgba(255, 255, 255, .12);
+  color: #bfdbfe;
+}
+
+.plan button.btn {
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .hero--study {
+    padding: 58px 0 38px;
+  }
+
+  .hero__cta .btn,
+  .cta__inner .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .education-notice__inner {
+    grid-template-columns: 1fr;
+  }
+}
