@@ -1,4 +1,5 @@
 from app.schemas import StudyLevel, StudyMode, StudyTopic
+from app.services.academic_accuracy import build_academic_accuracy_rules
 
 
 LEVEL_LABELS = {
@@ -59,6 +60,12 @@ def build_system_prompt(
     level_label = LEVEL_LABELS.get(level, "Geral")
     topic_label = TOPIC_LABELS.get(topic, "Estudos gerais")
     mode_instruction = MODE_INSTRUCTIONS.get(mode, MODE_INSTRUCTIONS[StudyMode.professor])
+    academic_accuracy_rules = build_academic_accuracy_rules(
+        topic=topic,
+        mode=mode,
+        has_context=has_context,
+        level=level,
+    )
 
     context_rule = (
         "Há contexto/material fornecido pelo aluno. Use esse material como prioridade."
@@ -91,6 +98,8 @@ Regras obrigatórias:
 
 Instrução do modo:
 {mode_instruction}
+
+{academic_accuracy_rules}
 
 Regra de contexto:
 {context_rule}
