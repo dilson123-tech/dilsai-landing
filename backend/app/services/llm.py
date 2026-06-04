@@ -75,3 +75,78 @@ def _fallback_response(
 
     return build_no_context_answer(payload=payload, has_api_key=has_api_key)
 
+async def generate_study_answer(payload: ChatRequest, settings: Settings) -> str:
+    knowledge = find_knowledge_context(payload)
+    knowledge_context = knowledge.prompt_context
+
+    user_context = payload.context.strip() if payload.context and payload.context.strip() else ""
+    combined_context = "\n\n".join(
+        item for item in [knowledge_context, user_context] if item
+    )
+
+    has_context = bool(combined_context)
+    has_api_key = bool(settings.openai_api_key.strip())
+
+    if payload.mode == "fonte_segura" and not has_context:
+        return (
+            "Não encontrei informação suficiente na base atual para responder com segurança. "
+            "Para usar o Modo Fonte Segura, envie o material, apostila, PDF ou contexto da aula."
+        )
+
+    if not has_api_key:
+        return _fallback_response(
+            payload,
+            has_api_key=False,
+            knowledge_context=knowledge_context,
+            user_context=user_context,
+        )
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=settings.openai_api_key.strip())
+        system_prompt = build_system_prompt(
+            topic=payload.topic,
+            mode=payload.mode,
+            has_context=has_context,
+            level=payload.level,
+        )
+
+        user_content = payload.message
+        if has_context:
+            user_content = (
+                "Contexto/material disponível para resposta:\n"
+                f"{combined_context}\n\n"
+                "Pergunta do aluno:\n"
+                f"{payload.message}"
+            )
+
+        response = client.chat.completions.create(
+            model=settings.llm_model,
+            temperature=settings.llm_temperature,
+            max_tokens=settings.llm_max_tokens,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ],
+        )
+
+        content = response.choices[0].message.content
+        if not content:
+            return _fallback_response(
+                payload,
+                has_api_key=True,
+                knowledge_context=knowledge_context,
+                user_context=user_context,
+            )
+
+        return content
+
+    except Exception:
+        return _fallback_response(
+            payload,
+            has_api_key=True,
+            knowledge_context=knowledge_context,
+            user_context=user_context,
+        )
+
