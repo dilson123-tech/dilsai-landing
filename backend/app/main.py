@@ -253,8 +253,38 @@ async def extract_material_text(request: Request) -> dict:
 @app.post("/api/v1/chat", response_model=ChatResponse)
 async def chat(payload: ChatRequest) -> ChatResponse:
     knowledge = find_knowledge_context(payload)
-    answer = await generate_study_answer(payload=payload, settings=settings)
     has_user_context = bool(payload.context and payload.context.strip())
+
+    # Academic Accuracy V1:
+    # Em Fonte Segura, sem material do aluno, não aceitar base interna fraca.
+    # Produto real precisa preferir pedir contexto a responder com fonte errada.
+    weak_internal_source = (
+        payload.mode == "fonte_segura"
+        and not has_user_context
+        and (not knowledge.found or knowledge.score < 10)
+    )
+
+    if weak_internal_source:
+        return ChatResponse(
+            response=(
+                "Não encontrei material suficiente para responder com segurança no Modo Fonte Segura.\n\n"
+                "Para evitar resposta inventada ou fonte fraca, envie o print completo da questão, "
+                "as alternativas, o trecho da apostila, PDF ou contexto da aula.\n\n"
+                "Ponto de atenção:\n"
+                "Fonte Segura só deve responder quando houver base confiável."
+            ),
+            mode=payload.mode,
+            topic=payload.topic,
+            used_context=False,
+            confidence="context_required",
+            safety_notice="Modo Fonte Segura exige material confiável do aluno ou base interna forte.",
+            source_title=None,
+            source_path=None,
+            source_type=None,
+            source_score=None,
+        )
+
+    answer = await generate_study_answer(payload=payload, settings=settings)
     user_source_title, user_source_type = extract_user_material_source(payload.context)
     used_context = has_user_context or knowledge.found
     use_user_source = has_user_context and bool(user_source_title)
