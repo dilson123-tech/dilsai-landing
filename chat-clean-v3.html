@@ -33,7 +33,7 @@
     }
 
     .chat {
-      height: calc(100vh - 92px);
+      height: 100%;
       background: #ffffff;
       border: 1px solid #dbe3ef;
       border-radius: 24px;
@@ -259,13 +259,369 @@
       background: #eef6ff;
     }
 
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 14px;
+      align-items: stretch;
+      height: calc(100vh - 92px);
+    }
+
+    .side-tabs {
+      background: #ffffff;
+      border: 1px solid #dbe3ef;
+      border-radius: 24px;
+      box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+      padding: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .side-tabs__title {
+      margin: 0;
+      font-size: 0.95rem;
+      color: #0f172a;
+    }
+
+    .side-tabs__subtitle {
+      margin: 0 0 8px;
+      font-size: 0.74rem;
+      line-height: 1.35;
+      color: #64748b;
+    }
+
+    .side-tabs input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .side-tabs__nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .side-tabs__nav label {
+      display: block;
+      padding: 10px 11px;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      background: #f8fafc;
+      color: #334155;
+      font-size: 0.78rem;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    #tab-level:checked ~ .side-tabs__nav label[for="tab-level"],
+    #tab-subject:checked ~ .side-tabs__nav label[for="tab-subject"],
+    #tab-mode:checked ~ .side-tabs__nav label[for="tab-mode"],
+    #tab-material:checked ~ .side-tabs__nav label[for="tab-material"],
+    #tab-ocr:checked ~ .side-tabs__nav label[for="tab-ocr"] {
+      background: #5b21e6;
+      border-color: #5b21e6;
+      color: #ffffff;
+    }
+
+    .side-tabs__content {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding-top: 8px;
+    }
+
+    .side-tabs__panel {
+      display: none;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 12px;
+      background: #fbfdff;
+    }
+
+    .side-tabs__panel h3 {
+      margin: 0 0 8px;
+      font-size: 0.88rem;
+    }
+
+    .side-tabs__panel p,
+    .side-tabs__panel li {
+      font-size: 0.76rem;
+      line-height: 1.4;
+      color: #475569;
+    }
+
+    .side-tabs__panel ul {
+      padding-left: 18px;
+      margin: 8px 0 0;
+    }
+
+    #tab-level:checked ~ .side-tabs__content .side-tabs__panel--level,
+    #tab-subject:checked ~ .side-tabs__content .side-tabs__panel--subject,
+    #tab-mode:checked ~ .side-tabs__content .side-tabs__panel--mode,
+    #tab-material:checked ~ .side-tabs__content .side-tabs__panel--material,
+    #tab-ocr:checked ~ .side-tabs__content .side-tabs__panel--ocr {
+      display: block;
+    }
+
+
+    .side-tabs__control {
+      display: grid;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .side-tabs__control span {
+      font-size: 0.72rem;
+      font-weight: 900;
+      color: #334155;
+    }
+
+    .side-tabs__control select,
+    .side-tabs__control textarea {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 9px 10px;
+      background: #ffffff;
+      color: #0f172a;
+      font: inherit;
+      font-size: 0.76rem;
+      outline: none;
+    }
+
+    .side-tabs__control textarea {
+      min-height: 110px;
+      resize: vertical;
+      line-height: 1.35;
+    }
+
+    .side-tabs__note {
+      margin-top: 10px;
+      padding: 9px;
+      border-radius: 12px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 0.72rem;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
     @media (max-width: 720px) {
       .page { padding: 10px; }
+
+      .workspace {
+        height: auto;
+        grid-template-columns: 1fr;
+      }
+
+      .side-tabs {
+        border-radius: 18px;
+      }
+
       .chat { height: calc(100vh - 74px); border-radius: 18px; }
       .msg { max-width: 94%; }
       .input-row { grid-template-columns: auto 1fr; }
       .send-btn { grid-column: 1 / -1; width: 100%; }
     }
+  
+    /* DilsAI Estudos — Side Tabs Accordion V2 */
+    .side-tabs__accordion {
+      display: grid;
+      gap: 8px;
+    }
+
+    .side-tabs__trigger {
+      display: block;
+      padding: 10px 11px;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      background: #f8fafc;
+      color: #334155;
+      font-size: 0.78rem;
+      font-weight: 900;
+      cursor: pointer;
+      transition: 0.16s ease;
+    }
+
+    .side-tabs__accordion .side-tabs__panel {
+      margin-top: -2px;
+      margin-bottom: 4px;
+    }
+
+    #tab-level:checked + label,
+    #tab-subject:checked + label,
+    #tab-mode:checked + label,
+    #tab-material:checked + label,
+    #tab-ocr:checked + label {
+      background: #5b21e6;
+      border-color: #5b21e6;
+      color: #ffffff;
+    }
+
+    #tab-level:checked + label + .side-tabs__panel--level,
+    #tab-subject:checked + label + .side-tabs__panel--subject,
+    #tab-mode:checked + label + .side-tabs__panel--mode,
+    #tab-material:checked + label + .side-tabs__panel--material,
+    #tab-ocr:checked + label + .side-tabs__panel--ocr {
+      display: block;
+    }
+
+    .side-tabs__mini-list {
+      display: grid;
+      gap: 5px;
+      margin-top: 9px;
+    }
+
+    .side-tabs__mini-list span {
+      display: block;
+      padding: 6px 8px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 0.7rem;
+      font-weight: 800;
+    }
+
+  
+    #tab-career:checked + label {
+      background: #5b21e6;
+      border-color: #5b21e6;
+      color: #ffffff;
+    }
+
+    #tab-career:checked + label + .side-tabs__panel--career {
+      display: block;
+    }
+
+  
+    .side-tabs__trigger {
+      display: grid;
+      gap: 2px;
+    }
+
+    .side-tabs__trigger-main {
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+
+    .side-tabs__trigger-value {
+      font-size: 0.68rem;
+      font-weight: 800;
+      opacity: 0.72;
+      line-height: 1.2;
+    }
+
+    #tab-level:checked + label .side-tabs__trigger-value,
+    #tab-subject:checked + label .side-tabs__trigger-value,
+    #tab-career:checked + label .side-tabs__trigger-value,
+    #tab-mode:checked + label .side-tabs__trigger-value,
+    #tab-material:checked + label .side-tabs__trigger-value,
+    #tab-ocr:checked + label .side-tabs__trigger-value {
+      color: #ffffff;
+      opacity: 0.9;
+    }
+
+    .side-tabs__panel p {
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+
+    .side-tabs__mini-list {
+      max-height: 155px;
+      overflow-y: auto;
+    }
+
+  
+    /* DilsAI Estudos — Side Panel Details Accordion */
+    .side-tabs__accordion {
+      display: grid;
+      gap: 8px;
+    }
+
+    .side-field {
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      background: #f8fafc;
+      overflow: hidden;
+    }
+
+    .side-field[open] {
+      background: #ffffff;
+      border-color: #c4b5fd;
+      box-shadow: 0 0 0 3px rgba(91, 33, 230, 0.08);
+    }
+
+    .side-field summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 10px 11px;
+      display: grid;
+      gap: 2px;
+    }
+
+    .side-field summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .side-field summary::after {
+      content: "▾";
+      position: absolute;
+      right: 12px;
+      transform: translateY(2px);
+      color: #64748b;
+      font-size: 0.8rem;
+    }
+
+    .side-field[open] summary::after {
+      content: "▴";
+    }
+
+    .side-field__title {
+      font-size: 0.78rem;
+      font-weight: 900;
+      color: #334155;
+      padding-right: 20px;
+    }
+
+    .side-field__value {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #64748b;
+      line-height: 1.2;
+      padding-right: 20px;
+    }
+
+    .side-field__body {
+      padding: 0 11px 11px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .side-field__body h3 {
+      margin: 0;
+      font-size: 0.84rem;
+      color: #0f172a;
+    }
+
+    .side-field__body p,
+    .side-field__body li {
+      font-size: 0.73rem;
+      line-height: 1.35;
+      color: #475569;
+    }
+
+    .side-field__body p {
+      margin: 0;
+    }
+
+    .side-field__body ul {
+      margin: 0;
+      padding-left: 17px;
+    }
+
   </style>
 </head>
 <body>
@@ -273,8 +629,191 @@
     <h1>DilsAI Estudos — Chat Seco V3</h1>
     <p class="subtitle">Teste isolado: texto + Ctrl+V de print no mesmo campo, sem lateral e sem OCR ainda.</p>
 
-    <section class="chat">
-      <header class="chat-header">
+    <div class="workspace">
+      <aside class="side-tabs" aria-label="Painel lateral educacional do Chat Seco V3">
+        <h2 class="side-tabs__title">Painel de estudo</h2>
+        <p class="side-tabs__subtitle">Cada campo abre nele mesmo. O campo de conversa aprovado não foi alterado.</p>
+
+        <div class="side-tabs__accordion">
+          <details class="side-field" open>
+            <summary>
+              <span class="side-field__title">Nível</span>
+              <span id="study-level-trigger-value" class="side-field__value">Geral</span>
+            </summary>
+            <div class="side-field__body">
+              <p>Define a profundidade da explicação.</p>
+              <label class="side-tabs__control">
+                <span>Nível do aluno</span>
+                <select id="study-level">
+                  <option value="geral">Geral</option>
+                  <option value="alfabetizacao">Alfabetização / Reforço inicial</option>
+                  <option value="fundamental_anos_iniciais">Fundamental — anos iniciais</option>
+                  <option value="fundamental_anos_finais">Fundamental — anos finais</option>
+                  <option value="ensino_medio">Ensino médio</option>
+                  <option value="enem_vestibular">ENEM / Vestibular</option>
+                  <option value="tecnico">Técnico / Profissionalizante</option>
+                  <option value="superior">Superior / Faculdade</option>
+                  <option value="concurso">Concurso público</option>
+                  <option value="pos_avancado">Pós / Avançado</option>
+                  <option value="livre_profissional">Curso livre / Profissional</option>
+                </select>
+              </label>
+              <ul>
+                <li>Básico: linguagem simples.</li>
+                <li>ENEM/concurso: foco em prova.</li>
+                <li>Superior: resposta mais técnica.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="side-field">
+            <summary>
+              <span class="side-field__title">Matéria</span>
+              <span id="study-subject-trigger-value" class="side-field__value">Geral</span>
+            </summary>
+            <div class="side-field__body">
+              <p>Escolhe a matéria ou área principal do estudo.</p>
+              <label class="side-tabs__control">
+                <span>Matéria</span>
+                <select id="study-subject">
+                  <option value="geral">Geral</option>
+                  <option value="matematica_logica">Matemática e lógica</option>
+                  <option value="aritmetica">Aritmética</option>
+                  <option value="algebra">Álgebra</option>
+                  <option value="geometria">Geometria</option>
+                  <option value="estatistica">Estatística</option>
+                  <option value="calculo">Cálculo</option>
+                  <option value="portugues">Português</option>
+                  <option value="gramatica">Gramática</option>
+                  <option value="interpretacao_texto">Interpretação de texto</option>
+                  <option value="redacao">Redação</option>
+                  <option value="ingles">Inglês</option>
+                  <option value="fisica">Física</option>
+                  <option value="quimica">Química</option>
+                  <option value="biologia">Biologia</option>
+                  <option value="historia">História</option>
+                  <option value="geografia">Geografia</option>
+                  <option value="filosofia">Filosofia</option>
+                  <option value="sociologia">Sociologia</option>
+                  <option value="programacao">Programação</option>
+                  <option value="informatica">Informática</option>
+                  <option value="banco_dados">Banco de dados</option>
+                  <option value="inteligencia_artificial">Inteligência artificial</option>
+                  <option value="direito">Direito</option>
+                  <option value="administracao">Administração</option>
+                  <option value="contabilidade">Contabilidade</option>
+                  <option value="economia">Economia</option>
+                  <option value="financas">Finanças</option>
+                  <option value="marketing">Marketing</option>
+                  <option value="engenharia">Engenharia</option>
+                  <option value="saude">Saúde</option>
+                  <option value="pedagogia">Pedagogia</option>
+                </select>
+              </label>
+            </div>
+          </details>
+
+          <details class="side-field">
+            <summary>
+              <span class="side-field__title">Cursos/Profissões</span>
+              <span id="study-career-trigger-value" class="side-field__value">Geral / ainda não definido</span>
+            </summary>
+            <div class="side-field__body">
+              <p>Adapta exemplos para curso, profissão ou objetivo.</p>
+              <label class="side-tabs__control">
+                <span>Curso / profissão</span>
+                <select id="study-career">
+                  <option value="geral">Geral / ainda não definido</option>
+                  <option value="ciencia_computacao">Ciência da Computação</option>
+                  <option value="analise_sistemas">Análise e Desenvolvimento de Sistemas</option>
+                  <option value="engenharia_software">Engenharia de Software</option>
+                  <option value="dados_ia">Dados / Inteligência Artificial</option>
+                  <option value="direito_advocacia">Direito / Advocacia</option>
+                  <option value="gestao_publica">Gestão Pública</option>
+                  <option value="administracao_empresas">Administração de Empresas</option>
+                  <option value="contabilidade_profissional">Contabilidade</option>
+                  <option value="recursos_humanos">Recursos Humanos</option>
+                  <option value="logistica_profissional">Logística</option>
+                  <option value="marketing_vendas">Marketing / Vendas</option>
+                  <option value="medicina">Medicina</option>
+                  <option value="enfermagem_profissional">Enfermagem</option>
+                  <option value="farmacia_profissional">Farmácia</option>
+                  <option value="psicologia_profissional">Psicologia</option>
+                  <option value="pedagogia_professor">Pedagogia / Professor</option>
+                  <option value="engenharia_civil">Engenharia Civil</option>
+                  <option value="engenharia_eletrica">Engenharia Elétrica</option>
+                  <option value="seguranca_publica">Segurança Pública</option>
+                  <option value="policial">Policial</option>
+                  <option value="agro">Agronegócio</option>
+                  <option value="tecnico_informatica">Técnico em Informática</option>
+                  <option value="tecnico_administracao">Técnico em Administração</option>
+                </select>
+              </label>
+            </div>
+          </details>
+
+          <details class="side-field">
+            <summary>
+              <span class="side-field__title">Modo</span>
+              <span id="study-mode-trigger-value" class="side-field__value">Professor</span>
+            </summary>
+            <div class="side-field__body">
+              <p>Define o formato da resposta.</p>
+              <label class="side-tabs__control">
+                <span>Modo</span>
+                <select id="study-mode">
+                  <option value="professor">Professor</option>
+                  <option value="direto">Direto</option>
+                  <option value="resumo">Resumo</option>
+                  <option value="revisao">Revisão</option>
+                  <option value="passo_a_passo">Passo a passo</option>
+                  <option value="simulado">Simulado</option>
+                  <option value="fonte_segura">Fonte segura</option>
+                  <option value="exercicios">Exercícios</option>
+                  <option value="correcao_resposta">Correção de resposta</option>
+                  <option value="plano_estudo">Plano de estudo</option>
+                  <option value="mapa_mental">Mapa mental</option>
+                  <option value="flashcards">Flashcards</option>
+                  <option value="questoes_comentadas">Questões comentadas</option>
+                  <option value="aprofundamento">Aprofundamento técnico</option>
+                </select>
+              </label>
+            </div>
+          </details>
+
+          <details class="side-field">
+            <summary>
+              <span class="side-field__title">Material</span>
+              <span id="study-material-trigger-value" class="side-field__value">Sem contexto extra</span>
+            </summary>
+            <div class="side-field__body">
+              <p>Material de apoio que não é o print principal.</p>
+              <label class="side-tabs__control">
+                <span>Contexto extra</span>
+                <textarea id="study-extra-context" placeholder="Cole aqui resumo da aula, trecho da apostila, regra da prova ou observações do aluno."></textarea>
+              </label>
+            </div>
+          </details>
+
+          <details class="side-field">
+            <summary>
+              <span class="side-field__title">OCR</span>
+              <span class="side-field__value">Status dos prints</span>
+            </summary>
+            <div class="side-field__body">
+              <p>Leitura dos prints anexados no campo principal.</p>
+              <ul>
+                <li>OCR pronto: texto lido.</li>
+                <li>OCR falhou: recorte melhor a questão.</li>
+                <li>Futuro: ver texto lido e refazer OCR.</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </aside>
+
+      <section class="chat">
+        <header class="chat-header">
         <div>
           <strong>Professor DilsAI</strong>
           <span>Cole print com Ctrl+V, arraste ou escolha imagem. Depois envie.</span>
@@ -299,7 +838,8 @@
 
         <input id="file" type="file" accept="image/png,image/jpeg,image/webp" hidden />
       </form>
-    </section>
+      </section>
+    </div>
   </main>
 
   <script>
@@ -315,6 +855,53 @@
     const OCR_URL = `${API_BASE}/api/v1/materials/extract-text`;
 
     let pendingImages = [];
+
+
+    function getSelectedOptionLabel(selectId) {
+      const select = document.getElementById(selectId);
+      if (!select) return "";
+
+      const option = select.options[select.selectedIndex];
+      return option ? option.textContent.trim() : "";
+    }
+
+    function setTabValue(targetId, value) {
+      const target = document.getElementById(targetId);
+      if (target) target.textContent = value || "";
+    }
+
+    function updateStudyTabSummaries() {
+      setTabValue("study-level-trigger-value", getSelectedOptionLabel("study-level") || "Geral");
+      setTabValue("study-subject-trigger-value", getSelectedOptionLabel("study-subject") || "Geral");
+      setTabValue("study-career-trigger-value", getSelectedOptionLabel("study-career") || "Geral / ainda não definido");
+      setTabValue("study-mode-trigger-value", getSelectedOptionLabel("study-mode") || "Professor");
+
+      const material = document.getElementById("study-extra-context");
+      const materialValue = material?.value?.trim();
+      setTabValue(
+        "study-material-trigger-value",
+        materialValue ? "Contexto preenchido" : "Sem contexto extra"
+      );
+    }
+
+    function bindStudyTabSummaryEvents() {
+      ["study-level", "study-subject", "study-career", "study-mode"].forEach((id) => {
+        const select = document.getElementById(id);
+        if (select && select.dataset.summaryBound !== "1") {
+          select.dataset.summaryBound = "1";
+          select.addEventListener("change", updateStudyTabSummaries);
+        }
+      });
+
+      const material = document.getElementById("study-extra-context");
+      if (material && material.dataset.summaryBound !== "1") {
+        material.dataset.summaryBound = "1";
+        material.addEventListener("input", updateStudyTabSummaries);
+      }
+
+      updateStudyTabSummaries();
+    }
+
 
     function addMessage(role, text, meta = "") {
       const node = document.createElement("div");
@@ -663,6 +1250,8 @@
       "Chat seco pronto. Cole um print com Ctrl+V no campo de digitar, arraste imagem ou use o botão +.",
       "Bem-vindo"
     );
+
+    bindStudyTabSummaryEvents();
 
     input.focus();
   </script>
