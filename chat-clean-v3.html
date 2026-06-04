@@ -622,14 +622,761 @@
       padding-left: 17px;
     }
 
+  
+    /* DilsAI Estudos — Product Shell V1 */
+    :root {
+      --brand-blue: #2563eb;
+      --brand-blue-dark: #1e3a8a;
+      --brand-blue-soft: #eff6ff;
+      --brand-cyan: #06b6d4;
+      --brand-line: rgba(37, 99, 235, 0.18);
+      --shell-card: rgba(255, 255, 255, 0.94);
+      --shell-shadow: 0 22px 60px rgba(15, 23, 42, 0.14);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.20), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(6, 182, 212, 0.15), transparent 30%),
+        linear-gradient(180deg, #eff6ff, #f8fafc);
+      color: #0f172a;
+    }
+
+    .page {
+      max-width: 1220px;
+      padding: 22px;
+    }
+
+    .product-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border: 1px solid var(--brand-line);
+      border-radius: 24px;
+      background: var(--shell-card);
+      box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--brand-blue), var(--brand-cyan));
+      color: #ffffff;
+      font-weight: 950;
+      letter-spacing: -0.05em;
+      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.26);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.28rem;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      color: #0f172a;
+    }
+
+    .brand p {
+      margin: 3px 0 0;
+      font-size: 0.86rem;
+      line-height: 1.25;
+      color: #334155;
+      font-weight: 700;
+    }
+
+    .product-nav {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .product-nav a,
+    .product-nav button {
+      border: 0;
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 9px 13px;
+      background: #ffffff;
+      color: var(--brand-blue-dark);
+      font-size: 0.82rem;
+      font-weight: 900;
+      cursor: pointer;
+      border: 1px solid rgba(37, 99, 235, 0.16);
+    }
+
+    .product-nav .primary-action {
+      background: linear-gradient(135deg, var(--brand-blue), var(--brand-cyan));
+      color: #ffffff;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
+    }
+
+    .product-hero {
+      margin-bottom: 16px;
+      padding: 18px;
+      border-radius: 28px;
+      border: 1px solid var(--brand-line);
+      background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(6, 182, 212, 0.08)),
+        var(--shell-card);
+      box-shadow: var(--shell-shadow);
+      display: grid;
+      grid-template-columns: 1.35fr 0.65fr;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .hero-copy h2 {
+      margin: 0;
+      font-size: 1.7rem;
+      line-height: 1.08;
+      letter-spacing: -0.045em;
+      color: #0f172a;
+    }
+
+    .hero-copy p {
+      margin: 8px 0 0;
+      max-width: 760px;
+      color: #334155;
+      line-height: 1.45;
+      font-weight: 750;
+    }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 13px;
+    }
+
+    .hero-badges span {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: #ffffff;
+      border: 1px solid rgba(37, 99, 235, 0.15);
+      color: var(--brand-blue-dark);
+      font-size: 0.76rem;
+      font-weight: 900;
+    }
+
+    .hero-panel {
+      border-radius: 22px;
+      padding: 14px;
+      background: #ffffff;
+      border: 1px solid rgba(37, 99, 235, 0.14);
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    }
+
+    .hero-panel strong {
+      display: block;
+      color: #0f172a;
+      font-size: 0.96rem;
+      margin-bottom: 7px;
+    }
+
+    .hero-panel ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .hero-panel li {
+      color: #334155;
+      font-size: 0.82rem;
+      line-height: 1.42;
+      font-weight: 750;
+    }
+
+    .plans {
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .plan-card {
+      border-radius: 22px;
+      padding: 14px;
+      background: var(--shell-card);
+      border: 1px solid var(--brand-line);
+      box-shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
+    }
+
+    .plan-card.is-featured {
+      border-color: rgba(37, 99, 235, 0.38);
+      box-shadow: 0 18px 42px rgba(37, 99, 235, 0.16);
+      background:
+        linear-gradient(180deg, rgba(239, 246, 255, 0.85), #ffffff);
+    }
+
+    .plan-card span {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 5px 8px;
+      background: var(--brand-blue-soft);
+      color: var(--brand-blue-dark);
+      font-size: 0.7rem;
+      font-weight: 950;
+      margin-bottom: 8px;
+    }
+
+    .plan-card h3 {
+      margin: 0;
+      color: #0f172a;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .plan-card p {
+      margin: 6px 0 0;
+      color: #334155;
+      font-size: 0.82rem;
+      line-height: 1.4;
+      font-weight: 700;
+    }
+
+    .workspace {
+      grid-template-columns: 250px minmax(0, 1fr);
+      gap: 16px;
+      height: calc(100vh - 378px);
+      min-height: 560px;
+    }
+
+    .side-tabs,
+    .chat {
+      background: var(--shell-card);
+      border: 1px solid var(--brand-line);
+      box-shadow: var(--shell-shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .side-tabs {
+      border-top: 5px solid var(--brand-blue);
+    }
+
+    .chat {
+      border-top: 5px solid var(--brand-blue);
+      min-width: 0;
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, #ffffff, #eff6ff);
+    }
+
+    .chat-header strong {
+      color: #0f172a;
+      font-size: 1.1rem;
+      font-weight: 950;
+    }
+
+    .chat-header span {
+      color: #1e3a8a;
+      font-weight: 850;
+    }
+
+    .chat-header button,
+    .attach-btn {
+      background: #eff6ff;
+      color: var(--brand-blue-dark);
+      border: 1px solid rgba(37, 99, 235, 0.14);
+    }
+
+    .send-btn,
+    .msg.user {
+      background: linear-gradient(135deg, var(--brand-blue), var(--brand-cyan));
+    }
+
+    .send-btn {
+      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.25);
+    }
+
+    .composer:focus-within {
+      border-color: var(--brand-blue);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .side-field[open] {
+      border-color: rgba(37, 99, 235, 0.35);
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.12);
+    }
+
+    @media (max-width: 920px) {
+      .product-header,
+      .product-hero {
+        grid-template-columns: 1fr;
+      }
+
+      .product-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .product-nav {
+        justify-content: flex-start;
+      }
+
+      .plans {
+        grid-template-columns: 1fr;
+      }
+
+      .workspace {
+        height: auto;
+        min-height: 0;
+        grid-template-columns: 1fr;
+      }
+    }
+
+  
+    /* DilsAI Estudos — Product Shell readability + soft background V1 */
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.20), transparent 26%),
+        radial-gradient(circle at top right, rgba(6, 182, 212, 0.16), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(99, 102, 241, 0.14), transparent 24%),
+        linear-gradient(180deg, #dfe8f7 0%, #eaf1fb 45%, #dde8f2 100%);
+      color: #0f172a;
+    }
+
+    .page {
+      max-width: 1240px;
+    }
+
+    .product-header,
+    .product-hero,
+    .plan-card,
+    .side-tabs,
+    .chat {
+      background: rgba(245, 249, 255, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .product-header,
+    .product-hero,
+    .plan-card {
+      border-color: rgba(37, 99, 235, 0.14);
+    }
+
+    .brand h1,
+    .hero-copy h2,
+    .plan-card h3,
+    .chat-header strong,
+    .side-tabs__title,
+    .side-field__title,
+    .side-field__body h3 {
+      color: #0f172a;
+    }
+
+    .brand p,
+    .subtitle,
+    .hero-copy p,
+    .hero-panel li,
+    .plan-card p,
+    .chat-header span,
+    .side-tabs__subtitle,
+    .side-field__value,
+    .side-field__body p,
+    .side-field__body li,
+    .hint {
+      color: #334155;
+    }
+
+    .workspace {
+      grid-template-columns: 265px minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .side-tabs {
+      padding: 16px 15px;
+      border-top: 5px solid #2563eb;
+    }
+
+    .side-tabs__title {
+      font-size: 1.08rem;
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .side-tabs__subtitle {
+      font-size: 0.86rem;
+      line-height: 1.45;
+      font-weight: 800;
+      color: #334155;
+      background: rgba(255,255,255,0.62);
+      border-radius: 12px;
+      padding: 10px 11px;
+    }
+
+    .side-field {
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .side-field[open] {
+      background: rgba(255,255,255,0.92);
+      border-color: rgba(37, 99, 235, 0.34);
+      box-shadow: 0 10px 26px rgba(37, 99, 235, 0.10);
+    }
+
+    .side-field summary {
+      padding: 12px 12px;
+    }
+
+    .side-field__title {
+      font-size: 0.95rem;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    .side-field__value {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #334155;
+    }
+
+    .side-field__body {
+      padding: 0 12px 12px;
+      gap: 10px;
+    }
+
+    .side-field__body h3 {
+      font-size: 0.98rem;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    .side-field__body p,
+    .side-field__body li {
+      font-size: 0.87rem;
+      line-height: 1.5;
+      color: #1e293b;
+      font-weight: 700;
+    }
+
+    .side-tabs__control span {
+      font-size: 0.86rem;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    .side-tabs__control select,
+    .side-tabs__control textarea {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      color: #0f172a;
+      font-size: 0.9rem;
+      font-weight: 700;
+      border-radius: 12px;
+    }
+
+    .chat {
+      background: rgba(244, 248, 253, 0.90);
+      border-top: 5px solid #2563eb;
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, rgba(255,255,255,0.84), rgba(231,240,255,0.82));
+    }
+
+    .chat-header strong {
+      font-size: 1.1rem;
+      font-weight: 950;
+      color: #0f172a;
+    }
+
+    .chat-header span {
+      font-size: 0.88rem;
+      font-weight: 850;
+      color: #1e3a8a;
+    }
+
+    .messages {
+      background:
+        linear-gradient(180deg, rgba(240, 245, 251, 0.82), rgba(234, 241, 248, 0.74));
+    }
+
+    .msg.assistant {
+      background: rgba(255,255,255,0.88);
+      border-color: rgba(148, 163, 184, 0.25);
+      color: #0f172a;
+    }
+
+    .msg {
+      font-size: 0.98rem;
+      line-height: 1.5;
+    }
+
+    .msg small {
+      font-size: 0.81rem;
+      color: #475569;
+      font-weight: 900;
+    }
+
+    .composer-wrap {
+      background: linear-gradient(180deg, rgba(248,251,255,0.88), rgba(240,246,253,0.92));
+    }
+
+    .composer {
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(148, 163, 184, 0.30);
+      box-shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
+    }
+
+    .text-input {
+      font-size: 0.98rem;
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    .text-input:empty::before {
+      color: #64748b;
+      font-weight: 700;
+    }
+
+    .hint {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #475569;
+    }
+
+    .attach-btn,
+    .chat-header button {
+      background: rgba(239, 246, 255, 0.95);
+      color: #1e3a8a;
+      border: 1px solid rgba(37, 99, 235, 0.14);
+      font-weight: 900;
+    }
+
+    .send-btn {
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      color: #ffffff;
+      font-weight: 900;
+    }
+
+    @media (max-width: 920px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+  
+    /* DilsAI Estudos — top shell typography fix V1 */
+    .product-header {
+      padding: 16px 18px;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      font-size: 1rem;
+    }
+
+    .brand h1 {
+      font-size: 1.42rem;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+      color: #0f172a;
+    }
+
+    .brand p {
+      font-size: 0.95rem;
+      line-height: 1.35;
+      color: #334155;
+      font-weight: 800;
+    }
+
+    .product-nav {
+      gap: 10px;
+    }
+
+    .product-nav a,
+    .product-nav button {
+      font-size: 0.9rem;
+      font-weight: 900;
+      padding: 10px 15px;
+    }
+
+    .product-hero {
+      padding: 20px;
+      gap: 18px;
+    }
+
+    .hero-copy h2 {
+      font-size: 2rem;
+      line-height: 1.08;
+      font-weight: 950;
+      letter-spacing: -0.045em;
+      color: #0f172a;
+    }
+
+    .hero-copy p {
+      font-size: 1rem;
+      line-height: 1.55;
+      color: #1e293b;
+      font-weight: 800;
+      max-width: 760px;
+    }
+
+    .hero-badges {
+      gap: 9px;
+      margin-top: 15px;
+    }
+
+    .hero-badges span {
+      font-size: 0.82rem;
+      font-weight: 900;
+      padding: 8px 11px;
+      color: #1e3a8a;
+    }
+
+    .hero-panel {
+      padding: 16px;
+    }
+
+    .hero-panel strong {
+      font-size: 1rem;
+      font-weight: 950;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+
+    .hero-panel li {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: #334155;
+      font-weight: 800;
+    }
+
+    .plans {
+      gap: 14px;
+    }
+
+    .plan-card {
+      padding: 16px;
+    }
+
+    .plan-card span {
+      font-size: 0.76rem;
+      font-weight: 950;
+      padding: 6px 9px;
+    }
+
+    .plan-card h3 {
+      font-size: 1.12rem;
+      font-weight: 950;
+      color: #0f172a;
+    }
+
+    .plan-card p {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #334155;
+      font-weight: 800;
+      margin-top: 7px;
+    }
+
+    @media (max-width: 920px) {
+      .brand h1 {
+        font-size: 1.22rem;
+      }
+
+      .brand p,
+      .hero-copy p,
+      .plan-card p,
+      .hero-panel li {
+        font-size: 0.9rem;
+      }
+
+      .hero-copy h2 {
+        font-size: 1.5rem;
+      }
+
+      .product-nav a,
+      .product-nav button {
+        font-size: 0.86rem;
+        padding: 9px 13px;
+      }
+    }
+
   </style>
 </head>
 <body>
   <main class="page">
-    <h1>DilsAI Estudos — Chat Seco V3</h1>
-    <p class="subtitle">Teste isolado: texto + Ctrl+V de print no mesmo campo, sem lateral e sem OCR ainda.</p>
+    <header class="product-header">
+      <div class="brand">
+        <div class="brand-mark">DA</div>
+        <div>
+          <h1>DilsAI Estudos</h1>
+          <p>IA para estudar com texto, print, OCR, matérias, cursos e provas.</p>
+        </div>
+      </div>
 
-    <div class="workspace">
+      <nav class="product-nav" aria-label="Menu principal">
+        <a href="#plans">Planos</a>
+        <a href="#study-panel">Estudar agora</a>
+        <button class="primary-action" type="button">Experimentar grátis</button>
+      </nav>
+    </header>
+
+    <section class="product-hero">
+      <div class="hero-copy">
+        <h2>Seu professor de IA para estudar do básico ao avançado.</h2>
+        <p>Envie texto, cole print da questão, use OCR e organize o estudo por nível, matéria, curso, profissão e modo de resposta.</p>
+        <div class="hero-badges">
+          <span>Ctrl+V de print</span>
+          <span>OCR no anexo</span>
+          <span>Ensino básico ao superior</span>
+          <span>Concursos e profissões</span>
+        </div>
+      </div>
+
+      <aside class="hero-panel">
+        <strong>Produto em construção real</strong>
+        <ul>
+          <li>Chat educacional aprovado visualmente.</li>
+          <li>Painel lateral por nível, matéria e curso.</li>
+          <li>Motores de IA serão ligados por camada.</li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="plans" id="plans" aria-label="Planos DilsAI Estudos">
+      <article class="plan-card">
+        <span>Inicial</span>
+        <h3>Grátis</h3>
+        <p>Para testar perguntas, prints e fluxo básico de estudo.</p>
+      </article>
+
+      <article class="plan-card is-featured">
+        <span>Recomendado</span>
+        <h3>Estudante</h3>
+        <p>Para rotina de estudos, OCR, matérias e modos de resposta.</p>
+      </article>
+
+      <article class="plan-card">
+        <span>Avançado</span>
+        <h3>Pro</h3>
+        <p>Para cursos, concursos, materiais longos e estudos profissionais.</p>
+      </article>
+    </section>
+
+    <div class="workspace" id="study-panel">
       <aside class="side-tabs" aria-label="Painel lateral educacional do Chat Seco V3">
         <h2 class="side-tabs__title">Painel de estudo</h2>
         <p class="side-tabs__subtitle">Cada campo abre nele mesmo. O campo de conversa aprovado não foi alterado.</p>
