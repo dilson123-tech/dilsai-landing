@@ -261,7 +261,6 @@ async def chat(payload: ChatRequest) -> ChatResponse:
     weak_internal_source = (
         payload.mode == "fonte_segura"
         and not has_user_context
-        and (not knowledge.found or knowledge.score < 10)
     )
 
     if weak_internal_source:
