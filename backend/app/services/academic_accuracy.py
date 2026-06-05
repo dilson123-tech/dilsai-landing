@@ -424,6 +424,51 @@ def build_basic_unit_conversion_answer(message: str) -> str | None:
         "Metro cúbico mede volume. Para questão de prova com figura, caixa, piscina, carga ou densidade, envie o print ou o enunciado completo para eu resolver no contexto."
     )
 
+
+
+def _normalize_basic_fact_message(message: str) -> str:
+    normalized = message.lower().strip()
+    replacements = {
+        "á": "a",
+        "à": "a",
+        "ã": "a",
+        "â": "a",
+        "é": "e",
+        "ê": "e",
+        "í": "i",
+        "ó": "o",
+        "ô": "o",
+        "õ": "o",
+        "ú": "u",
+        "ç": "c",
+    }
+
+    for old, new in replacements.items():
+        normalized = normalized.replace(old, new)
+
+    return " ".join(normalized.split())
+
+
+def build_basic_school_fact_answer(message: str) -> str | None:
+    normalized = _normalize_basic_fact_message(message)
+
+    if (
+        "quem descobriu o brasil" in normalized
+        or "quem descobriu brasil" in normalized
+        or "descobridor do brasil" in normalized
+    ):
+        return (
+            "Resposta escolar tradicional:\n\n"
+            "O Brasil foi oficialmente registrado pelos portugueses em 1500, com a chegada de Pedro Álvares Cabral.\n\n"
+            "Resposta final:\n"
+            "Pedro Álvares Cabral, em 1500.\n\n"
+            "Ponto de atenção:\n"
+            "A palavra “descobriu” é uma simplificação escolar. Antes da chegada dos portugueses, vários povos indígenas já viviam no território brasileiro. Em provas, normalmente a resposta esperada é Pedro Álvares Cabral, mas em uma explicação histórica mais completa é melhor dizer “chegada dos portugueses ao Brasil”.\n\n"
+            "Se for uma questão específica de prova, envie o print ou as alternativas para eu ajustar a resposta ao enunciado."
+        )
+
+    return None
+
 def build_basic_arithmetic_answer(message: str) -> str | None:
     square_root_answer = build_basic_square_root_answer(message)
     if square_root_answer:
