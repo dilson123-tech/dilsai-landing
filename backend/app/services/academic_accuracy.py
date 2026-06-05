@@ -200,3 +200,183 @@ def build_no_context_answer(*, payload: ChatRequest, has_api_key: bool) -> str:
         "Ponto de atenção:\n"
         "Como produto de estudos, o DilsAI deve evitar chute quando faltar base."
     )
+
+
+
+def _safe_eval_arithmetic_expression(expression: str) -> float | int | None:
+    import ast
+    import operator
+
+    operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.USub: operator.neg,
+        ast.UAdd: operator.pos,
+    }
+
+    def eval_node(node):
+        if isinstance(node, ast.Expression):
+            return eval_node(node.body)
+
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return node.value
+
+        if isinstance(node, ast.UnaryOp) and type(node.op) in operators:
+            return operators[type(node.op)](eval_node(node.operand))
+
+        if isinstance(node, ast.BinOp) and type(node.op) in operators:
+            left = eval_node(node.left)
+            right = eval_node(node.right)
+
+            if isinstance(node.op, ast.Div) and right == 0:
+                raise ZeroDivisionError("divisão por zero")
+
+            return operators[type(node.op)](left, right)
+
+        raise ValueError("expressão não permitida")
+
+    try:
+        tree = ast.parse(expression, mode="eval")
+        return eval_node(tree)
+    except Exception:
+        return None
+
+
+def _format_arithmetic_result(value: float | int) -> str:
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+
+    if isinstance(value, float):
+        formatted = f"{value:.10f}".rstrip("0").rstrip(".")
+        return formatted
+
+    return str(value)
+
+
+def extract_basic_arithmetic_expression(message: str) -> str | None:
+    import re
+
+    normalized = (
+        message.lower()
+        .replace("quanto é", "")
+        .replace("quanto e", "")
+        .replace("calcule", "")
+        .replace("resolver", "")
+        .replace("resolva", "")
+        .replace("vezes", "*")
+        .replace("x", "*")
+        .replace("×", "*")
+        .replace("÷", "/")
+        .replace(",", ".")
+    )
+
+    # Mantém apenas expressão aritmética básica.
+    candidate = "".join(ch for ch in normalized if ch in "0123456789+-*/(). ")
+
+    candidate = re.sub(r"\s+", "", candidate)
+
+    if not candidate:
+        return None
+
+    if not re.search(r"\d", candidate):
+        return None
+
+    if not re.search(r"[+\-*/]", candidate):
+        return None
+
+    return candidate
+
+
+
+
+def extract_basic_square_root_value(message: str) -> float | int | None:
+    import re
+    import math
+
+    normalized = (
+        message.lower()
+        .replace(",", ".")
+        .replace("√", " raiz quadrada de ")
+        .replace("sqrt", " raiz quadrada de ")
+    )
+
+    patterns = [
+        r"raiz\s+quadrada\s+(?:de|do|da)?\s*(-?\d+(?:\.\d+)?)",
+        r"raiz\s+(?:de|do|da)?\s*(-?\d+(?:\.\d+)?)",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, normalized)
+        if not match:
+            continue
+
+        value = float(match.group(1))
+
+        if value < 0:
+            return None
+
+        result = math.sqrt(value)
+
+        if result.is_integer():
+            return int(result)
+
+        return result
+
+    return None
+
+
+def build_basic_square_root_answer(message: str) -> str | None:
+    value = extract_basic_square_root_value(message)
+
+    if value is None:
+        return None
+
+    import re
+
+    normalized = message.lower().replace(",", ".")
+    match = re.search(r"(-?\d+(?:\.\d+)?)", normalized)
+    original_number = match.group(1) if match else "o número informado"
+
+    result_text = _format_arithmetic_result(value)
+
+    return (
+        "Resolvi como raiz quadrada básica.\n\n"
+        f"Conta:\n√{original_number}\n\n"
+        "Resolução:\n"
+        f"√{original_number} = {result_text}, porque {result_text} × {result_text} = {original_number}.\n\n"
+        "Resposta final:\n"
+        f"{result_text}\n\n"
+        "Ponto de atenção:\n"
+        "Para questões maiores com enunciado, alternativas ou fórmula aplicada, envie o print ou o material completo."
+    )
+
+def build_basic_arithmetic_answer(message: str) -> str | None:
+    square_root_answer = build_basic_square_root_answer(message)
+    if square_root_answer:
+        return square_root_answer
+
+    expression = extract_basic_arithmetic_expression(message)
+
+    if not expression:
+        return None
+
+    result = _safe_eval_arithmetic_expression(expression)
+
+    if result is None:
+        return None
+
+    result_text = _format_arithmetic_result(result)
+    readable_expression = expression.replace("*", " × ").replace("/", " ÷ ").replace("+", " + ").replace("-", " - ")
+
+    return (
+        "Resolvi como aritmética básica.\n\n"
+        f"Conta:\n{readable_expression}\n\n"
+        "Resolução:\n"
+        f"{readable_expression} = {result_text}\n\n"
+        "Resposta final:\n"
+        f"{result_text}\n\n"
+        "Ponto de atenção:\n"
+        "Para questões maiores de prova, com enunciado ou alternativas, envie o print ou o material completo."
+    )
