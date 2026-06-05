@@ -97,14 +97,10 @@ def _iter_knowledge_files() -> list[Path]:
 
 
 def find_knowledge_context(payload: ChatRequest, max_chars: int = 2200) -> KnowledgeContext:
-    query_text = " ".join(
-        [
-            payload.message or "",
-            payload.level.value,
-            payload.topic.value,
-            payload.mode.value,
-        ]
-    )
+    # Não usar nível ou modo como termos de busca principais.
+    # Eles são configuração pedagógica, não assunto. Usá-los contaminava a busca
+    # e podia puxar material de outra matéria apenas por "ensino_medio".
+    query_text = payload.message or ""
 
     query_tokens = _tokens(query_text)
     if not query_tokens:
@@ -122,14 +118,19 @@ def find_knowledge_context(payload: ChatRequest, max_chars: int = 2200) -> Knowl
         if payload.topic.value != "geral" and payload.topic.value in searchable:
             score += 8
 
-        if payload.level.value != "geral" and payload.level.value in searchable:
-            score += 4
+        matched_query_token = False
 
         for token in query_tokens:
             if token in searchable:
                 score += 2
+                matched_query_token = True
 
-        if score < 6:
+        # Nível escolar é só bônus quando já existe sinal real de assunto.
+        if score > 0 and payload.level.value != "geral" and payload.level.value in searchable:
+            score += 2
+
+        # Evita fonte interna fraca ou achada apenas por metadado escolar.
+        if score < 6 or not matched_query_token:
             continue
 
         clipped_content = content.strip()

@@ -1600,6 +1600,7 @@
 
     const API_BASE = localStorage.getItem("DILSAI_API_BASE") || "http://127.0.0.1:8091";
     const OCR_URL = `${API_BASE}/api/v1/materials/extract-text`;
+    const CHAT_URL = `${API_BASE}/api/v1/chat`;
 
     let pendingImages = [];
 
@@ -1946,13 +1947,229 @@
       event.target.value = "";
     });
 
-    form.addEventListener("submit", (event) => {
+
+    function getSelectedValue(id, fallback = "geral") {
+      const element = document.getElementById(id);
+      return element?.value || fallback;
+    }
+
+    function getSelectedLabel(id, fallback = "Geral") {
+      const element = document.getElementById(id);
+      if (!element || !element.options) return fallback;
+      return element.options[element.selectedIndex]?.textContent?.trim() || element.value || fallback;
+    }
+
+    function normalizeLevelForApi(value) {
+      const map = {
+        geral: "geral",
+        alfabetizacao: "fundamental_1",
+        fundamental_anos_iniciais: "fundamental_1",
+        fundamental_anos_finais: "fundamental_2",
+        ensino_medio: "ensino_medio",
+        enem_vestibular: "ensino_medio",
+        tecnico: "tecnico",
+        livre_profissional: "tecnico",
+        superior: "universidade",
+        pos_avancado: "universidade",
+        concurso: "concurso",
+      };
+
+      return map[value] || "geral";
+    }
+
+    function normalizeTopicForApi(value) {
+      const exact = new Set([
+        "geral",
+        "matematica_logica",
+        "portugues",
+        "redacao",
+        "programacao",
+        "informatica",
+        "direito",
+        "administracao",
+        "fisica",
+        "quimica",
+        "biologia",
+        "historia",
+        "geografia",
+        "ingles",
+        "filosofia",
+        "sociologia",
+        "engenharia",
+        "saude",
+        "humanas",
+        "negocios",
+      ]);
+
+      if (exact.has(value)) return value;
+
+      const map = {
+        aritmetica: "matematica_logica",
+        algebra: "matematica_logica",
+        geometria: "matematica_logica",
+        estatistica: "matematica_logica",
+        calculo: "matematica_logica",
+        matematica_financeira: "matematica_logica",
+
+        gramatica: "portugues",
+        interpretacao_texto: "portugues",
+        literatura: "portugues",
+        espanhol: "geral",
+
+        ciencias: "biologia",
+        anatomia: "saude",
+        fisiologia: "saude",
+
+        artes: "humanas",
+        educacao_fisica: "saude",
+
+        banco_dados: "programacao",
+        redes_computadores: "informatica",
+        seguranca_informacao: "informatica",
+        inteligencia_artificial: "programacao",
+
+        direito_constitucional: "direito",
+        direito_administrativo: "direito",
+        direito_civil: "direito",
+        direito_penal: "direito",
+        direito_trabalho: "direito",
+
+        contabilidade: "negocios",
+        economia: "negocios",
+        financas: "negocios",
+        marketing: "negocios",
+        empreendedorismo: "negocios",
+        logistica: "administracao",
+        gestao_publica: "administracao",
+
+        enfermagem: "saude",
+        farmacia: "saude",
+        psicologia: "saude",
+        pedagogia: "humanas",
+      };
+
+      return map[value] || "geral";
+    }
+
+    function normalizeModeForApi(value) {
+      const exact = new Set([
+        "direto",
+        "professor",
+        "resumo",
+        "passo_a_passo",
+        "revisao",
+        "simulado",
+        "fonte_segura",
+      ]);
+
+      if (exact.has(value)) return value;
+
+      const map = {
+        exercicios: "simulado",
+        correcao_resposta: "professor",
+        plano_estudo: "revisao",
+        mapa_mental: "resumo",
+        flashcards: "simulado",
+        questoes_comentadas: "simulado",
+        explicacao_infantil: "professor",
+        aprofundamento: "professor",
+      };
+
+      return map[value] || "professor";
+    }
+
+    function buildStudyContext(ocrContext) {
+      const extraContext = document.getElementById("study-extra-context")?.value?.trim() || "";
+
+      return [
+        extraContext ? `Material/contexto extra do aluno:\n${extraContext}` : "",
+        ocrContext ? `Texto extraído por OCR do print anexado:\n${ocrContext}` : "",
+      ].filter(Boolean).join("\n\n");
+    }
+
+    function buildStudyInstructionPrefix() {
+      const levelLabel = getSelectedLabel("study-level", "Geral");
+      const subjectLabel = getSelectedLabel("study-subject", "Geral");
+      const careerLabel = getSelectedLabel("study-career", "Geral / ainda não definido");
+      const modeLabel = getSelectedLabel("study-mode", "Professor");
+
+      return [
+        "Configuração de estudo selecionada:",
+        `- Nível: ${levelLabel}`,
+        `- Matéria/área: ${subjectLabel}`,
+        `- Curso/profissão: ${careerLabel}`,
+        `- Modo de resposta: ${modeLabel}`,
+      ].join("\n");
+    }
+
+    function formatDilsAISourceLabel(data) {
+      if (!data) return "";
+
+      if (data.source_title) {
+        return `Fonte: ${data.source_title}`;
+      }
+
+      if (data.used_context) {
+        return "Usou material/contexto";
+      }
+
+      if (data.confidence === "context_required") {
+        return "Precisa de contexto";
+      }
+
+      return "";
+    }
+
+    async function askDilsAI(payload) {
+      const response = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      let data = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.detail || `HTTP ${response.status}`);
+      }
+
+      return data;
+    }
+
+
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
 
       const text = input.innerText.trim();
       const hasImages = pendingImages.length > 0;
 
       if (!text && !hasImages) return;
+
+      const sendButton = form.querySelector(".send-btn");
+      if (sendButton) {
+        sendButton.disabled = true;
+        sendButton.textContent = "Analisando...";
+      }
+
+      const ocrPromises = pendingImages
+        .map((item) => item.ocrPromise)
+        .filter(Boolean);
+
+      if (ocrPromises.length) {
+        await Promise.allSettled(ocrPromises);
+      }
+
+      const ocrContext = pendingImages
+        .map((item) => item.ocrText)
+        .filter(Boolean)
+        .join("\n\n");
 
       pendingImages.forEach((item) => {
         addImageMessage(item.file, item.file.name || "print");
@@ -1962,20 +2179,74 @@
         addMessage("user", text, "Pergunta");
       }
 
-      const ocrContext = pendingImages
-        .map((item) => item.ocrText)
-        .filter(Boolean)
-        .join("\n\n");
+      const levelValue = getSelectedValue("study-level", "geral");
+      const subjectValue = getSelectedValue("study-subject", "geral");
+      const modeValue = getSelectedValue("study-mode", "professor");
 
-      if (ocrContext) {
-        console.log("[DilsAI Chat Seco V3] OCR pronto para futura API:", ocrContext);
+      const level = normalizeLevelForApi(levelValue);
+      const topic = normalizeTopicForApi(subjectValue);
+      const mode = normalizeModeForApi(modeValue);
+
+      const baseMessage = text || "Analise o print/imagem anexado por OCR e explique de forma didática.";
+      // Configurações educacionais já são enviadas em level/topic/mode.
+      // Não colocar configuração lateral dentro da pergunta para não contaminar a busca de fontes.
+      const outboundMessage = baseMessage;
+      const context = buildStudyContext(ocrContext);
+
+      addMessage("assistant", "Analisando com o Motor de Precisão Acadêmica V1...", "DilsAI");
+
+      try {
+        const data = await askDilsAI({
+          user_name: "Dilson",
+          message: outboundMessage,
+          level,
+          topic,
+          mode,
+          context,
+        });
+
+        const last = messages.lastElementChild;
+        if (last && last.classList.contains("assistant")) {
+          last.remove();
+        }
+
+        const metaParts = [];
+        if (data.topic) metaParts.push(`Tema: ${data.topic}`);
+        if (data.mode) metaParts.push(`Modo: ${data.mode}`);
+        if (data.used_context) metaParts.push("Usou contexto");
+        if (data.confidence) metaParts.push(`Confiança: ${data.confidence}`);
+
+        const sourceLabel = formatDilsAISourceLabel(data);
+        if (sourceLabel) metaParts.push(sourceLabel);
+
+        addMessage(
+          "assistant",
+          data.answer || data.response || "Recebi, mas a API não retornou resposta.",
+          metaParts.join(" • ") || "DilsAI"
+        );
+
+        pendingImages.forEach((item) => URL.revokeObjectURL(item.url));
+        pendingImages = [];
+        renderPending();
+        input.innerHTML = "";
+        input.focus();
+      } catch (error) {
+        const last = messages.lastElementChild;
+        if (last && last.classList.contains("assistant")) {
+          last.remove();
+        }
+
+        addMessage(
+          "assistant",
+          `Não consegui falar com a API em ${API_BASE}. Verifique se o backend está rodando. Erro: ${error.message}`,
+          "Erro de conexão"
+        );
+      } finally {
+        if (sendButton) {
+          sendButton.disabled = false;
+          sendButton.textContent = "Enviar";
+        }
       }
-
-      pendingImages.forEach((item) => URL.revokeObjectURL(item.url));
-      pendingImages = [];
-      renderPending();
-      input.innerHTML = "";
-      input.focus();
     });
 
     document.getElementById("clear").addEventListener("click", () => {

@@ -2,7 +2,7 @@ from app.config import Settings
 from app.schemas import ChatRequest
 from app.services.knowledge import find_knowledge_context
 from app.services.prompts import build_system_prompt
-from app.services.academic_accuracy import build_deterministic_context_answer, build_internal_knowledge_answer, build_no_context_answer
+from app.services.academic_accuracy import build_basic_arithmetic_answer, build_basic_school_fact_answer, build_basic_unit_conversion_answer, build_deterministic_context_answer, build_internal_knowledge_answer, build_no_context_answer
 
 
 def _normalize_context_lines(context: str, max_lines: int = 8) -> list[str]:
@@ -72,6 +72,18 @@ def _fallback_response(
             knowledge_context=knowledge_context,
             has_api_key=has_api_key,
         )
+
+    arithmetic_answer = build_basic_arithmetic_answer(payload.message)
+    if arithmetic_answer:
+        return arithmetic_answer
+
+    unit_conversion_answer = build_basic_unit_conversion_answer(payload.message)
+    if unit_conversion_answer:
+        return unit_conversion_answer
+
+    school_fact_answer = build_basic_school_fact_answer(payload.message)
+    if school_fact_answer:
+        return school_fact_answer
 
     return build_no_context_answer(payload=payload, has_api_key=has_api_key)
 

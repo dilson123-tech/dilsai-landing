@@ -200,3 +200,300 @@ def build_no_context_answer(*, payload: ChatRequest, has_api_key: bool) -> str:
         "Ponto de atenção:\n"
         "Como produto de estudos, o DilsAI deve evitar chute quando faltar base."
     )
+
+
+
+def _safe_eval_arithmetic_expression(expression: str) -> float | int | None:
+    import ast
+    import operator
+
+    operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.USub: operator.neg,
+        ast.UAdd: operator.pos,
+    }
+
+    def eval_node(node):
+        if isinstance(node, ast.Expression):
+            return eval_node(node.body)
+
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return node.value
+
+        if isinstance(node, ast.UnaryOp) and type(node.op) in operators:
+            return operators[type(node.op)](eval_node(node.operand))
+
+        if isinstance(node, ast.BinOp) and type(node.op) in operators:
+            left = eval_node(node.left)
+            right = eval_node(node.right)
+
+            if isinstance(node.op, ast.Div) and right == 0:
+                raise ZeroDivisionError("divisão por zero")
+
+            return operators[type(node.op)](left, right)
+
+        raise ValueError("expressão não permitida")
+
+    try:
+        tree = ast.parse(expression, mode="eval")
+        return eval_node(tree)
+    except Exception:
+        return None
+
+
+def _format_arithmetic_result(value: float | int) -> str:
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+
+    if isinstance(value, float):
+        formatted = f"{value:.10f}".rstrip("0").rstrip(".")
+        return formatted
+
+    return str(value)
+
+
+def extract_basic_arithmetic_expression(message: str) -> str | None:
+    import re
+
+    normalized = (
+        message.lower()
+        .replace("quanto é", "")
+        .replace("quanto e", "")
+        .replace("calcule", "")
+        .replace("resolver", "")
+        .replace("resolva", "")
+        .replace("vezes", "*")
+        .replace("x", "*")
+        .replace("×", "*")
+        .replace("÷", "/")
+        .replace(",", ".")
+    )
+
+    # Mantém apenas expressão aritmética básica.
+    candidate = "".join(ch for ch in normalized if ch in "0123456789+-*/(). ")
+
+    candidate = re.sub(r"\s+", "", candidate)
+
+    if not candidate:
+        return None
+
+    if not re.search(r"\d", candidate):
+        return None
+
+    if not re.search(r"[+\-*/]", candidate):
+        return None
+
+    return candidate
+
+
+
+
+def extract_basic_square_root_value(message: str) -> float | int | None:
+    import re
+    import math
+
+    normalized = (
+        message.lower()
+        .replace(",", ".")
+        .replace("√", " raiz quadrada de ")
+        .replace("sqrt", " raiz quadrada de ")
+    )
+
+    patterns = [
+        r"raiz\s+quadrada\s+(?:de|do|da)?\s*(-?\d+(?:\.\d+)?)",
+        r"raiz\s+(?:de|do|da)?\s*(-?\d+(?:\.\d+)?)",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, normalized)
+        if not match:
+            continue
+
+        value = float(match.group(1))
+
+        if value < 0:
+            return None
+
+        result = math.sqrt(value)
+
+        if result.is_integer():
+            return int(result)
+
+        return result
+
+    return None
+
+
+def build_basic_square_root_answer(message: str) -> str | None:
+    value = extract_basic_square_root_value(message)
+
+    if value is None:
+        return None
+
+    import re
+
+    normalized = message.lower().replace(",", ".")
+    match = re.search(r"(-?\d+(?:\.\d+)?)", normalized)
+    original_number = match.group(1) if match else "o número informado"
+
+    result_text = _format_arithmetic_result(value)
+
+    return (
+        "Resolvi como raiz quadrada básica.\n\n"
+        f"Conta:\n√{original_number}\n\n"
+        "Resolução:\n"
+        f"√{original_number} = {result_text}, porque {result_text} × {result_text} = {original_number}.\n\n"
+        "Resposta final:\n"
+        f"{result_text}\n\n"
+        "Ponto de atenção:\n"
+        "Para questões maiores com enunciado, alternativas ou fórmula aplicada, envie o print ou o material completo."
+    )
+
+
+
+def extract_cubic_meter_value(message: str) -> float | int | None:
+    import re
+
+    normalized = (
+        message.lower()
+        .replace(",", ".")
+        .replace("³", "3")
+        .replace("ú", "u")
+        .replace("á", "a")
+        .replace("ã", "a")
+        .replace("é", "e")
+        .replace("ê", "e")
+        .replace("í", "i")
+        .replace("ó", "o")
+        .replace("ô", "o")
+        .replace("õ", "o")
+        .replace("ç", "c")
+    )
+
+    patterns = [
+        r"(-?\d+(?:\.\d+)?)\s*m\s*\^?\s*3",
+        r"(-?\d+(?:\.\d+)?)\s*metros?\s+cubicos?",
+        r"(-?\d+(?:\.\d+)?)\s*m3\b",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, normalized)
+        if not match:
+            continue
+
+        value = float(match.group(1))
+        if value < 0:
+            return None
+
+        if value.is_integer():
+            return int(value)
+
+        return value
+
+    return None
+
+
+def build_basic_unit_conversion_answer(message: str) -> str | None:
+    cubic_meters = extract_cubic_meter_value(message)
+
+    if cubic_meters is None:
+        return None
+
+    liters = cubic_meters * 1000
+    cubic_centimeters = cubic_meters * 1_000_000
+
+    cubic_meters_text = _format_arithmetic_result(cubic_meters)
+    liters_text = _format_arithmetic_result(liters)
+    cubic_centimeters_text = _format_arithmetic_result(cubic_centimeters)
+
+    return (
+        "Resolvi como conversão básica de volume.\n\n"
+        f"Medida informada:\n{cubic_meters_text} m³\n\n"
+        "Regra:\n"
+        "1 metro cúbico (1 m³) = 1.000 litros.\n\n"
+        "Resolução:\n"
+        f"{cubic_meters_text} × 1.000 = {liters_text} litros.\n\n"
+        "Resposta final:\n"
+        f"{cubic_meters_text} m³ = {liters_text} litros.\n\n"
+        "Também equivale a:\n"
+        f"{cubic_centimeters_text} cm³.\n\n"
+        "Ponto de atenção:\n"
+        "Metro cúbico mede volume. Para questão de prova com figura, caixa, piscina, carga ou densidade, envie o print ou o enunciado completo para eu resolver no contexto."
+    )
+
+
+
+def _normalize_basic_fact_message(message: str) -> str:
+    normalized = message.lower().strip()
+    replacements = {
+        "á": "a",
+        "à": "a",
+        "ã": "a",
+        "â": "a",
+        "é": "e",
+        "ê": "e",
+        "í": "i",
+        "ó": "o",
+        "ô": "o",
+        "õ": "o",
+        "ú": "u",
+        "ç": "c",
+    }
+
+    for old, new in replacements.items():
+        normalized = normalized.replace(old, new)
+
+    return " ".join(normalized.split())
+
+
+def build_basic_school_fact_answer(message: str) -> str | None:
+    normalized = _normalize_basic_fact_message(message)
+
+    if (
+        "quem descobriu o brasil" in normalized
+        or "quem descobriu brasil" in normalized
+        or "descobridor do brasil" in normalized
+    ):
+        return (
+            "Resposta escolar tradicional:\n\n"
+            "O Brasil foi oficialmente registrado pelos portugueses em 1500, com a chegada de Pedro Álvares Cabral.\n\n"
+            "Resposta final:\n"
+            "Pedro Álvares Cabral, em 1500.\n\n"
+            "Ponto de atenção:\n"
+            "A palavra “descobriu” é uma simplificação escolar. Antes da chegada dos portugueses, vários povos indígenas já viviam no território brasileiro. Em provas, normalmente a resposta esperada é Pedro Álvares Cabral, mas em uma explicação histórica mais completa é melhor dizer “chegada dos portugueses ao Brasil”.\n\n"
+            "Se for uma questão específica de prova, envie o print ou as alternativas para eu ajustar a resposta ao enunciado."
+        )
+
+    return None
+
+def build_basic_arithmetic_answer(message: str) -> str | None:
+    square_root_answer = build_basic_square_root_answer(message)
+    if square_root_answer:
+        return square_root_answer
+
+    expression = extract_basic_arithmetic_expression(message)
+
+    if not expression:
+        return None
+
+    result = _safe_eval_arithmetic_expression(expression)
+
+    if result is None:
+        return None
+
+    result_text = _format_arithmetic_result(result)
+    readable_expression = expression.replace("*", " × ").replace("/", " ÷ ").replace("+", " + ").replace("-", " - ")
+
+    return (
+        "Resolvi como aritmética básica.\n\n"
+        f"Conta:\n{readable_expression}\n\n"
+        "Resolução:\n"
+        f"{readable_expression} = {result_text}\n\n"
+        "Resposta final:\n"
+        f"{result_text}\n\n"
+        "Ponto de atenção:\n"
+        "Para questões maiores de prova, com enunciado ou alternativas, envie o print ou o material completo."
+    )
