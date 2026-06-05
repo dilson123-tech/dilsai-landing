@@ -352,6 +352,78 @@ def build_basic_square_root_answer(message: str) -> str | None:
         "Para questões maiores com enunciado, alternativas ou fórmula aplicada, envie o print ou o material completo."
     )
 
+
+
+def extract_cubic_meter_value(message: str) -> float | int | None:
+    import re
+
+    normalized = (
+        message.lower()
+        .replace(",", ".")
+        .replace("³", "3")
+        .replace("ú", "u")
+        .replace("á", "a")
+        .replace("ã", "a")
+        .replace("é", "e")
+        .replace("ê", "e")
+        .replace("í", "i")
+        .replace("ó", "o")
+        .replace("ô", "o")
+        .replace("õ", "o")
+        .replace("ç", "c")
+    )
+
+    patterns = [
+        r"(-?\d+(?:\.\d+)?)\s*m\s*\^?\s*3",
+        r"(-?\d+(?:\.\d+)?)\s*metros?\s+cubicos?",
+        r"(-?\d+(?:\.\d+)?)\s*m3\b",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, normalized)
+        if not match:
+            continue
+
+        value = float(match.group(1))
+        if value < 0:
+            return None
+
+        if value.is_integer():
+            return int(value)
+
+        return value
+
+    return None
+
+
+def build_basic_unit_conversion_answer(message: str) -> str | None:
+    cubic_meters = extract_cubic_meter_value(message)
+
+    if cubic_meters is None:
+        return None
+
+    liters = cubic_meters * 1000
+    cubic_centimeters = cubic_meters * 1_000_000
+
+    cubic_meters_text = _format_arithmetic_result(cubic_meters)
+    liters_text = _format_arithmetic_result(liters)
+    cubic_centimeters_text = _format_arithmetic_result(cubic_centimeters)
+
+    return (
+        "Resolvi como conversão básica de volume.\n\n"
+        f"Medida informada:\n{cubic_meters_text} m³\n\n"
+        "Regra:\n"
+        "1 metro cúbico (1 m³) = 1.000 litros.\n\n"
+        "Resolução:\n"
+        f"{cubic_meters_text} × 1.000 = {liters_text} litros.\n\n"
+        "Resposta final:\n"
+        f"{cubic_meters_text} m³ = {liters_text} litros.\n\n"
+        "Também equivale a:\n"
+        f"{cubic_centimeters_text} cm³.\n\n"
+        "Ponto de atenção:\n"
+        "Metro cúbico mede volume. Para questão de prova com figura, caixa, piscina, carga ou densidade, envie o print ou o enunciado completo para eu resolver no contexto."
+    )
+
 def build_basic_arithmetic_answer(message: str) -> str | None:
     square_root_answer = build_basic_square_root_answer(message)
     if square_root_answer:
