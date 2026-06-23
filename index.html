@@ -224,14 +224,14 @@
 
         <label class="study-app__field" for="dilsai-full-context">
           <span>Material/contexto opcional</span>
-          <textarea id="dilsai-full-context" rows="7" autocomplete="off" data-lpignore="true" data-form-type="other" placeholder="Cole aqui a questão, trecho da apostila, resumo da aula, material enviado pelo aluno ou use Ctrl+V para colar um print."></textarea>
+          <textarea id="dilsai-full-context" rows="7" autocomplete="off" data-lpignore="true" data-form-type="other" placeholder="Cole aqui o texto da questão, trecho do material ou use Ctrl+V para colar um print nítido."></textarea>
         </label>
 
         <div class="study-app__field study-app__field--upload">
           <span>Enviar material simples</span>
           <label class="study-app__upload-box" for="dilsai-full-material-file">
-            <strong>Selecionar arquivo .txt, .md, .pdf ou imagem</strong>
-            <small>O conteúdo será carregado no campo de contexto. Arquivos .txt, .md, PDF textual, imagem, PDF escaneado via OCR e print colado com Ctrl+V são aceitos.</small>
+            <strong>Enviar material ou imagem da questão</strong>
+            <small>O conteúdo será usado como contexto. Use .txt, .md, PDF textual, imagem ou print. Para melhor OCR, envie imagem nítida e recortada só na questão.</small>
           </label>
           <input id="dilsai-full-material-file" class="study-app__file-input" type="file" accept=".txt,.md,.pdf,.png,.jpg,.jpeg,.webp,text/plain,text/markdown,application/pdf,image/png,image/jpeg,image/webp" />
           <div id="dilsai-full-material-status" class="study-app__upload-status" aria-live="polite"></div>
@@ -239,7 +239,7 @@
         </div>
 
         <div class="study-app__notice">
-          Precisão acima de resposta bonita. Se depender de material específico, envie o material, cole um print com Ctrl+V e confira limites de IA/OCR.
+          Use como apoio de estudo. Envie a questão, cole um print com Ctrl+V e confira se o material está legível antes de enviar.
         </div>
       </aside>
 
@@ -255,7 +255,7 @@
         <div id="dilsai-full-messages" class="study-app__messages" aria-live="polite"></div>
 
         <form id="dilsai-full-chat-form" class="study-app__form">
-          <textarea id="dilsai-full-input" rows="2" placeholder="Digite sua dúvida de estudo..." autocomplete="off"></textarea>
+          <textarea id="dilsai-full-input" rows="2" placeholder="Digite sua dúvida ou peça: Resolva essa questão passo a passo..." autocomplete="off"></textarea>
           <button type="submit">Enviar</button>
         </form>
       </div>
