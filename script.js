@@ -589,7 +589,7 @@ function ensureFullStudyWelcome() {
 
   addFullStudyMessage(
     "assistant",
-    "Olá! Eu sou o Professor DilsAI. Escolha o nível, a matéria e o modo. Se a pergunta depender de apostila, questão, PDF ou regra específica, cole o material no campo de contexto para eu responder com mais precisão.",
+    "Olá! Eu sou o Professor DilsAI. Envie uma dúvida, cole o texto de uma questão ou mande um print/imagem para eu explicar passo a passo. Use como apoio de estudo, não para burlar avaliações.",
     "Bem-vindo"
   );
 
@@ -789,7 +789,7 @@ async function handleFullMaterialFileChange(event) {
 
       statusMessage = isPdf
         ? extracted?.source_type === "pdf_ocr"
-          ? `PDF escaneado processado por OCR: ${file.name} (${extracted.char_count || cleanContent.length} caracteres). OCR pode conter erros.`
+          ? `PDF escaneado processado por OCR: ${file.name} (${extracted.char_count || cleanContent.length} caracteres). Se a leitura ficar ruim, envie um print mais nítido.`
           : `PDF extraído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`
         : `OCR concluído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`;
     } else {
@@ -977,7 +977,7 @@ async function handleFullStudySubmit(event) {
     event.preventDefault();
 
     setFullMaterialStatus(
-      "Print colado detectado. Executando OCR para transformar a imagem em contexto de estudo...",
+      "Print recebido. Vou tentar ler a imagem e usar como contexto da questão...",
       "info"
     );
 
@@ -999,7 +999,7 @@ async function handleFullStudySubmit(event) {
       context.dataset.loadedFileSource = "clipboard_image_ocr";
 
       setFullMaterialStatus(
-        `Print colado processado por OCR: ${file.name}. OCR pode conter erros.`,
+        `Imagem/print processado por OCR: ${file.name}. Se a leitura ficar ruim, envie um print mais nítido.`,
         "success"
       );
     }
