@@ -487,8 +487,8 @@ async function handleChatSubmit(event) {
   } catch (error) {
     addMessage(
       "ai",
-      `Não consegui falar com a API agora. Verifique se o backend está rodando em ${window.API_BASE}. Erro: ${error.message}`,
-      "Falha de conexão"
+      "Não consegui conectar ao DilsAI agora. Tente novamente em instantes. Se continuar, confira se o serviço está ativo.",
+      "Conexão indisponível"
     );
   } finally {
     setTyping(false);
@@ -744,14 +744,14 @@ async function handleFullMaterialFileChange(event) {
 
   if (!isAllowedSimpleMaterialFile(file)) {
     event.target.value = "";
-    setFullMaterialStatus("Arquivo recusado. Use .txt, .md, PDF textual ou imagem PNG/JPG/WEBP neste ciclo.", "error");
+    setFullMaterialStatus("Não consegui aceitar esse arquivo. Use .txt, .md, PDF textual ou imagem PNG/JPG/WEBP.", "error");
     return;
   }
 
   if (file.size > DILSAI_SIMPLE_MATERIAL_MAX_BYTES) {
     event.target.value = "";
     setFullMaterialStatus(
-      `Arquivo muito grande (${formatMaterialFileSize(file.size)}). Limite atual: ${formatMaterialFileSize(DILSAI_SIMPLE_MATERIAL_MAX_BYTES)}.`,
+      `Esse arquivo está muito grande para o beta atual (${formatMaterialFileSize(file.size)}). Envie um arquivo menor ou recorte só a questão.`,
       "error"
     );
     return;
@@ -798,7 +798,7 @@ async function handleFullMaterialFileChange(event) {
 
       if (!cleanContent) {
         event.target.value = "";
-        setFullMaterialStatus("Arquivo vazio. Selecione um .txt ou .md com conteúdo.", "error");
+        setFullMaterialStatus("Esse arquivo parece estar vazio. Envie um material com texto ou tente outro arquivo.", "error");
         return;
       }
     }
@@ -822,7 +822,7 @@ async function handleFullMaterialFileChange(event) {
     setFullMaterialStatus(statusMessage, "success");
   } catch (error) {
     event.target.value = "";
-    setFullMaterialStatus(`Não consegui ler o arquivo. Erro: ${error.message}`, "error");
+    setFullMaterialStatus("Não consegui ler esse arquivo com segurança. Tente enviar uma imagem mais nítida, um PDF textual ou cole o texto da questão no campo de contexto.", "error");
   }
 }
 
@@ -889,7 +889,7 @@ async function handleFullStudySubmit(event) {
 
     addFullStudyMessage(
       "assistant",
-      data.answer || data.response || "Recebi, mas a API não retornou resposta.",
+      data.answer || data.response || "Recebi sua pergunta, mas não consegui gerar uma resposta agora. Tente novamente em instantes.",
       metaParts.join(" • ") || "DilsAI"
     );
   } catch (error) {
@@ -901,8 +901,8 @@ async function handleFullStudySubmit(event) {
 
     addFullStudyMessage(
       "assistant",
-      `Não consegui falar com a API agora. Verifique se o backend está rodando em ${window.API_BASE}. Erro: ${error.message}`,
-      "Erro de conexão"
+      "Não consegui conectar ao DilsAI agora. Tente novamente em instantes. Se continuar, confira se o serviço está ativo.",
+      "Conexão indisponível"
     );
   } finally {
     if (submitButton) {
