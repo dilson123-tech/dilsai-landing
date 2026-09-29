@@ -1,12 +1,14 @@
 from io import BytesIO
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.schemas import ChatRequest, ChatResponse
 from app.services.knowledge import find_knowledge_context
 from app.services.llm import generate_study_answer
+from app.services.rate_limit import InMemoryRateLimiter, get_client_identifier
 
 
 def extract_user_material_source(context: str | None) -> tuple[str | None, str | None]:
@@ -58,6 +60,7 @@ def extract_user_material_source(context: str | None) -> tuple[str | None, str |
 
 
 settings = get_settings()
+rate_limiter = InMemoryRateLimiter()
 
 SCANNED_PDF_OCR_MAX_PAGES = 3
 SCANNED_PDF_OCR_DPI = 220
@@ -67,6 +70,52 @@ app = FastAPI(
     description="API do DilsAI Estudos — IA de estudos com precisão, modos e resposta segura.",
     version=settings.app_version,
 )
+
+
+
+def _expensive_route_limit(path: str) -> tuple[str | None, int | None]:
+    if path == "/api/v1/chat":
+        return "chat", settings.rate_limit_chat_per_minute
+
+    if path == "/api/v1/materials/extract-text":
+        return "materials", settings.rate_limit_material_per_minute
+
+    return None, None
+
+
+@app.middleware("http")
+async def apply_expensive_route_rate_limit(request: Request, call_next):
+    if not settings.rate_limit_enabled or request.method == "OPTIONS":
+        return await call_next(request)
+
+    bucket, limit = _expensive_route_limit(request.url.path)
+
+    if bucket and limit is not None:
+        client_id = get_client_identifier(request)
+        result = rate_limiter.check(
+            identifier=client_id,
+            bucket=bucket,
+            limit=limit,
+            window_seconds=settings.rate_limit_window_seconds,
+        )
+
+        if not result.allowed:
+            return JSONResponse(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                content={
+                    "detail": "Limite de uso atingido. Aguarde um pouco antes de tentar novamente.",
+                    "rate_limit": {
+                        "bucket": bucket,
+                        "limit": result.limit,
+                        "remaining": result.remaining,
+                        "retry_after_seconds": result.retry_after,
+                    },
+                },
+                headers={"Retry-After": str(result.retry_after)},
+            )
+
+    return await call_next(request)
+
 
 app.add_middleware(
     CORSMiddleware,

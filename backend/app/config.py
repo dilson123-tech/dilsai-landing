@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 900
     openai_api_key: str = Field(default="", repr=False)
 
+    rate_limit_enabled: bool = True
+    rate_limit_window_seconds: int = 60
+    rate_limit_chat_per_minute: int = 20
+    rate_limit_material_per_minute: int = 8
+
     model_config = SettingsConfigDict(
         env_file=("backend/.env", ".env"),
         env_file_encoding="utf-8",
