@@ -561,6 +561,30 @@ function getSelectLabel(select) {
   return select.options[select.selectedIndex]?.text || select.value || "";
 }
 
+function escapeDilsAIHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function renderStudyMarkdownLite(text) {
+  let html = escapeDilsAIHtml(text)
+    .replace(/\r\n/g, "\n")
+    .replace(/\\\[([\s\S]*?)\\\]/g, '<div class="study-app__formula">$1</div>')
+    .replace(/^###\s+(.+)$/gm, '<h4 class="study-app__response-heading">$1</h4>')
+    .replace(/^\s*(\d+)\.\s+\*\*(.+?)\*\*:?\s*/gm, '<h4 class="study-app__response-heading">$1. $2</h4>')
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/^\s*-\s+(.+)$/gm, '<div class="study-app__list-item">• $1</div>')
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/\n\n/g, '<div class="study-app__paragraph-gap"></div>')
+    .replace(/\n/g, "<br>");
+
+  return html;
+}
+
 function addFullStudyMessage(role, text, meta) {
   const { messages } = getFullStudyElements();
   if (!messages) return;
@@ -576,7 +600,14 @@ function addFullStudyMessage(role, text, meta) {
   }
 
   const textNode = document.createElement("div");
-  textNode.textContent = text;
+  textNode.className = "study-app__message-body";
+
+  if (role === "user") {
+    textNode.textContent = text;
+  } else {
+    textNode.innerHTML = renderStudyMarkdownLite(text);
+  }
+
   bubble.appendChild(textNode);
 
   messages.appendChild(bubble);

@@ -667,3 +667,36 @@ input:checked + .slider:before{transform:translateX(20px)}
     grid-template-columns: 1fr;
   }
 }
+
+/* DilsAI Estudos — response markdown polish V1 */
+.study-app__message-body {
+  line-height: 1.62;
+}
+
+.study-app__response-heading {
+  margin: 14px 0 8px;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.study-app__response-heading:first-child {
+  margin-top: 0;
+}
+
+.study-app__paragraph-gap {
+  height: 10px;
+}
+
+.study-app__list-item {
+  margin: 4px 0 4px 10px;
+}
+
+.study-app__formula {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.05);
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  white-space: pre-wrap;
+}
