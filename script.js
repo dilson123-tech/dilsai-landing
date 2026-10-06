@@ -775,6 +775,47 @@ function clearFullMaterialPreview() {
   if (previewText) previewText.textContent = "";
 }
 
+function setFullMaterialFromAndroidCamera(data) {
+  const { context, materialFile, cameraFile } = getFullStudyElements();
+
+  if (!context) return;
+
+  const fileName = String(data?.file_name || "foto-da-questao.jpg");
+  const cleanContent = String(data?.text || "").trim();
+  const fileSize = Number(data?.file_size || 0);
+  const charCount = Number(data?.char_count || cleanContent.length || 0);
+
+  if (!cleanContent) {
+    setFullMaterialStatus(data?.warning || "Não consegui extrair texto dessa foto. Tente uma imagem mais nítida.", "error");
+    return;
+  }
+
+  const headerLines = [
+    `Arquivo enviado pelo aluno: ${fileName}`,
+    `Tamanho: ${fileSize > 0 ? formatMaterialFileSize(fileSize) : "foto capturada"}`,
+    "Tipo: OCR de imagem capturada pela câmera do Android",
+  ];
+
+  if (data?.warning) {
+    headerLines.push(`Aviso de extração: ${data.warning}`);
+  }
+
+  context.value = `${headerLines.join("\n")}\n\n${cleanContent}`;
+  context.dataset.loadedFileName = fileName;
+  context.dataset.loadedFileSize = String(fileSize || "");
+
+  if (materialFile) materialFile.value = "";
+  if (cameraFile) cameraFile.value = "";
+
+  setFullMaterialPreview(fileName, cleanContent);
+  setFullMaterialStatus(`OCR concluído: ${fileName} (${charCount} caracteres).`, "success");
+}
+
+window.dilsaiSetMaterialFromAndroidCamera = setFullMaterialFromAndroidCamera;
+window.dilsaiSetAndroidCameraStatus = function(message, type) {
+  setFullMaterialStatus(message, type || "info");
+};
+
 function isAllowedSimpleMaterialFile(file) {
   if (!file) return false;
 
@@ -1179,6 +1220,16 @@ function bindFullStudyChatEvents() {
     const cameraButton = event.target.closest("#dilsai-full-camera-trigger");
     if (cameraButton) {
       event.preventDefault();
+
+      if (
+        window.DilsAIAndroidCamera &&
+        typeof window.DilsAIAndroidCamera.openCamera === "function"
+      ) {
+        setFullMaterialStatus("Abrindo câmera...", "info");
+        window.DilsAIAndroidCamera.openCamera();
+        return;
+      }
+
       const { cameraFile } = getFullStudyElements();
       if (cameraFile) cameraFile.click();
       return;
