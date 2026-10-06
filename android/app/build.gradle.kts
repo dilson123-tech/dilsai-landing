@@ -1,5 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
+}
+
+val releaseSigningPropertiesFile =
+    file("${System.getProperty("user.home")}/.dilsai-estudos-signing/release.properties")
+
+val releaseSigningProperties = Properties()
+
+if (releaseSigningPropertiesFile.exists()) {
+    releaseSigningPropertiesFile.inputStream().use { input ->
+        releaseSigningProperties.load(input)
+    }
 }
 
 android {
@@ -10,17 +23,46 @@ android {
         applicationId = "com.dilsai.estudos"
         minSdk = 23
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.3.2-android-identity"
+        versionCode = 3
+        versionName = "0.3.3-release-aab"
+    }
+
+    signingConfigs {
+        create("release") {
+            if (releaseSigningPropertiesFile.exists()) {
+                storeFile = file(releaseSigningProperties.getProperty("storeFile"))
+                storePassword = releaseSigningProperties.getProperty("storePassword")
+                keyAlias = releaseSigningProperties.getProperty("keyAlias")
+                keyPassword = releaseSigningProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
+            if (releaseSigningPropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+}
+
+tasks.matching {
+    it.name == "preReleaseBuild"
+}.configureEach {
+    doFirst {
+        require(releaseSigningPropertiesFile.exists()) {
+            "Release requires ~/.dilsai-estudos-signing/release.properties"
+        }
+
+        val releaseStoreFile = releaseSigningProperties.getProperty("storeFile")
+        require(!releaseStoreFile.isNullOrBlank() && file(releaseStoreFile).exists()) {
+            "Release keystore not found. Check storeFile in ~/.dilsai-estudos-signing/release.properties"
         }
     }
 }
