@@ -1698,3 +1698,410 @@ body {
     text-align: center;
   }
 }
+
+/* === DilsAI Estudos — Organized Hero V1 === */
+.hero.hero--study {
+  padding: 72px 0 58px;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(6, 182, 212, .18), transparent 28rem),
+    radial-gradient(circle at 84% 20%, rgba(124, 58, 237, .35), transparent 32rem),
+    linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #4c1d95 100%);
+}
+
+.hero.hero--study .hero__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+  align-items: center;
+  gap: 64px;
+}
+
+.hero.hero--study .hero__inner::after {
+  content: none !important;
+  display: none !important;
+}
+
+.hero__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.hero.hero--study h1 {
+  max-width: 760px;
+  color: #ffffff !important;
+  font-size: clamp(42px, 5.2vw, 68px);
+  line-height: .98;
+  letter-spacing: -.06em;
+}
+
+.hero.hero--study p {
+  max-width: 650px;
+  color: #dbeafe !important;
+}
+
+.hero.hero--study .hero__cta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hero.hero--study .hero__trust {
+  margin-top: 26px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.hero__mockup {
+  position: relative;
+  padding: 22px;
+  border-radius: 32px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.07)),
+    rgba(15, 23, 42, .48);
+  border: 1px solid rgba(255, 255, 255, .20);
+  box-shadow: 0 34px 90px rgba(0, 0, 0, .34);
+  backdrop-filter: blur(18px);
+}
+
+.hero__mockup::before {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  border-radius: 42px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, .25), rgba(6, 182, 212, .16), rgba(124, 58, 237, .18));
+  filter: blur(28px);
+  z-index: -1;
+}
+
+.hero__mockup-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  color: #fff;
+  margin-bottom: 18px;
+}
+
+.hero__mockup-header span {
+  font-weight: 950;
+  font-size: 18px;
+}
+
+.hero__mockup-header small {
+  color: #bfdbfe;
+  font-weight: 800;
+}
+
+.hero__mockup-card {
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .10);
+  border: 1px solid rgba(255, 255, 255, .14);
+  color: #e5edff;
+  margin-top: 12px;
+}
+
+.hero__mockup-card strong {
+  display: block;
+  color: #ffffff;
+  margin-bottom: 7px;
+}
+
+.hero__mockup-card p {
+  margin: 0;
+  color: #dbeafe !important;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.hero__mockup-card--answer {
+  background: linear-gradient(135deg, rgba(34, 197, 94, .18), rgba(6, 182, 212, .13));
+}
+
+.hero__mockup-footer {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  color: #dcfce7;
+  background: rgba(34, 197, 94, .13);
+  font-weight: 850;
+  font-size: 13px;
+}
+
+@media (max-width: 960px) {
+  .hero.hero--study .hero__inner {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .hero.hero--study h1 {
+    font-size: clamp(36px, 10vw, 56px);
+  }
+
+  .hero__mockup {
+    max-width: 520px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero.hero--study {
+    padding: 42px 0 34px;
+  }
+
+  .hero.hero--study .hero__cta .btn {
+    width: 100%;
+  }
+
+  .hero__mockup {
+    padding: 18px;
+    border-radius: 24px;
+  }
+}
+
+
+/* === DilsAI Estudos — Organized Hero Cleanup V2 === */
+.hero.hero--study {
+  padding: 88px 0 68px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(6, 182, 212, .14), transparent 26rem),
+    radial-gradient(circle at 86% 18%, rgba(124, 58, 237, .28), transparent 30rem),
+    linear-gradient(135deg, #0f172a 0%, #1d4ed8 52%, #4c1d95 100%);
+}
+
+.hero.hero--study .hero__inner {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+  justify-items: center;
+}
+
+.hero__content {
+  width: min(100%, 920px);
+  margin: 0 auto;
+  text-align: center;
+  align-items: center !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero__mockup {
+  display: none !important;
+}
+
+.hero.hero--study .hero__eyebrow {
+  margin-bottom: 18px;
+}
+
+.hero.hero--study h1 {
+  margin: 0 0 18px;
+  max-width: 860px;
+  color: #ffffff !important;
+  font-size: clamp(42px, 6vw, 74px);
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+  font-weight: 900;
+  text-wrap: balance;
+}
+
+.hero.hero--study p {
+  margin: 0 auto 24px;
+  max-width: 760px;
+  color: #dbeafe !important;
+  font-size: clamp(18px, 2vw, 22px);
+  line-height: 1.65;
+}
+
+.hero.hero--study .hero__cta {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.hero.hero--study .hero__trust {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.hero.hero--study .hero__trust span {
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.18);
+  color: #eff6ff;
+}
+
+@media (max-width: 760px) {
+  .hero.hero--study {
+    padding: 58px 0 42px;
+  }
+
+  .hero.hero--study h1 {
+    font-size: clamp(34px, 10vw, 52px);
+    max-width: 12ch;
+  }
+
+  .hero.hero--study .hero__cta .btn {
+    width: 100%;
+  }
+}
+
+
+/* === DilsAI Estudos — Study App Eye Comfort V1 === */
+#dilsai-study-app.study-app {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, .20), transparent 34rem),
+    radial-gradient(circle at bottom right, rgba(124, 58, 237, .18), transparent 32rem),
+    linear-gradient(135deg, #0f172a 0%, #111827 55%, #172554 100%);
+}
+
+#dilsai-study-app .study-app__inner {
+  background: rgba(15, 23, 42, .92);
+  border: 1px solid rgba(148, 163, 184, .20);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .34);
+}
+
+#dilsai-study-app .study-app__sidebar {
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, .16), transparent 18rem),
+    #111827;
+  color: #e5e7eb;
+}
+
+#dilsai-study-app .study-app__sidebar h2,
+#dilsai-study-app .study-app__sidebar p,
+#dilsai-study-app .study-app__field span {
+  color: #e5e7eb;
+}
+
+#dilsai-study-app .study-app__field select,
+#dilsai-study-app .study-app__field textarea,
+#dilsai-study-app .study-app__form textarea {
+  background: #182235;
+  color: #f8fafc;
+  border-color: rgba(148, 163, 184, .34);
+}
+
+#dilsai-study-app .study-app__field select:focus,
+#dilsai-study-app .study-app__field textarea:focus,
+#dilsai-study-app .study-app__form textarea:focus {
+  outline: 2px solid rgba(96, 165, 250, .45);
+  border-color: #60a5fa;
+}
+
+#dilsai-study-app textarea::placeholder {
+  color: #94a3b8;
+}
+
+#dilsai-study-app .study-app__upload-box {
+  background: rgba(30, 41, 59, .82);
+  border-color: rgba(96, 165, 250, .55);
+  color: #dbeafe;
+}
+
+#dilsai-study-app .study-app__upload-box strong {
+  color: #ffffff;
+}
+
+#dilsai-study-app .study-app__upload-box small,
+#dilsai-study-app .study-app__upload-status {
+  color: #bfdbfe;
+}
+
+#dilsai-study-app .study-app__clear-material {
+  background: #1e293b;
+  color: #e5e7eb;
+  border-color: rgba(148, 163, 184, .30);
+}
+
+#dilsai-study-app .study-app__notice {
+  background: rgba(251, 146, 60, .12);
+  border: 1px solid rgba(251, 146, 60, .35);
+  color: #fed7aa;
+}
+
+#dilsai-study-app .study-app__chat {
+  background: #0b1120;
+  border-left: 1px solid rgba(148, 163, 184, .18);
+}
+
+#dilsai-study-app .study-app__chat-header {
+  background: linear-gradient(135deg, #020617, #172554);
+  border-bottom: 1px solid rgba(148, 163, 184, .20);
+}
+
+#dilsai-study-app .study-app__messages {
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, .10), transparent 26rem),
+    #0b1120;
+}
+
+#dilsai-study-app .study-app__message--assistant {
+  background: #182235;
+  border-color: rgba(148, 163, 184, .22);
+  color: #e5e7eb;
+}
+
+#dilsai-study-app .study-app__message--user {
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #ffffff;
+}
+
+#dilsai-study-app .study-app__form {
+  background: #111827;
+  border-top: 1px solid rgba(148, 163, 184, .20);
+}
+
+#dilsai-study-app .study-app__form button {
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  box-shadow: 0 12px 26px rgba(37, 99, 235, .28);
+}
+
+/* === DilsAI Estudos — Material Drag and Drop V1 === */
+#dilsai-study-app .study-app__upload-box.is-drag-over {
+  background: rgba(37, 99, 235, .24);
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, .18);
+  transform: translateY(-1px);
+}
+
+/* === DilsAI Estudos — Material Preview V1 === */
+#dilsai-study-app .study-app__material-preview {
+  margin-top: 10px;
+  border: 1px solid rgba(96, 165, 250, .35);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, .58);
+  color: #dbeafe;
+  overflow: hidden;
+}
+
+#dilsai-study-app .study-app__material-preview summary {
+  cursor: pointer;
+  padding: 11px 13px;
+  font-weight: 900;
+  color: #ffffff;
+  background: rgba(37, 99, 235, .18);
+}
+
+#dilsai-study-app .study-app__material-preview-meta {
+  padding: 10px 13px 0;
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+#dilsai-study-app .study-app__material-preview pre {
+  max-height: 180px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px 13px 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #e5e7eb;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}

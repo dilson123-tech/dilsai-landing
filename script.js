@@ -570,14 +570,25 @@ function escapeDilsAIHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function renderStudyMarkdownLite(text) {
-  let html = escapeDilsAIHtml(text)
+function normalizeStudyResponseText(text) {
+  return String(text || "")
     .replace(/\r\n/g, "\n")
+    // Remove linhas soltas com apenas barra invertida, comuns em Markdown escapado.
+    .replace(/^\s*\\\s*$/gm, "")
+    // Remove escapes visuais que estavam aparecendo para o aluno: \\- A), \\. etc.
+    .replace(/\\-/g, "-")
+    .replace(/\\([.!])/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function renderStudyMarkdownLite(text) {
+  let html = escapeDilsAIHtml(normalizeStudyResponseText(text))
     .replace(/\\\[([\s\S]*?)\\\]/g, '<div class="study-app__formula">$1</div>')
-    .replace(/^###\s+(.+)$/gm, '<h4 class="study-app__response-heading">$1</h4>')
+    .replace(/^#{2,4}\s+(.+)$/gm, '<h4 class="study-app__response-heading">$1</h4>')
     .replace(/^\s*(\d+)\.\s+\*\*(.+?)\*\*:?\s*/gm, '<h4 class="study-app__response-heading">$1. $2</h4>')
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/^\s*-\s+(.+)$/gm, '<div class="study-app__list-item">• $1</div>')
+    .replace(/^\s*[-•]\s+(.+)$/gm, '<div class="study-app__list-item">• $1</div>')
     .replace(/\n{3,}/g, "\n\n")
     .replace(/\n\n/g, '<div class="study-app__paragraph-gap"></div>')
     .replace(/\n/g, "<br>");
@@ -647,7 +658,7 @@ function clearFullStudyChat() {
 }
 
 
-const DILSAI_SIMPLE_MATERIAL_MAX_BYTES = 120000;
+const DILSAI_SIMPLE_MATERIAL_MAX_BYTES = 5 * 1024 * 1024;
 
 function formatMaterialFileSize(size) {
   if (!Number.isFinite(size)) return "";
@@ -662,6 +673,39 @@ function setFullMaterialStatus(message, type = "info") {
 
   materialStatus.textContent = message || "";
   materialStatus.dataset.status = type;
+}
+
+function setFullMaterialPreview(fileName, text) {
+  const preview = document.getElementById("dilsai-full-material-preview");
+  const meta = document.getElementById("dilsai-full-material-preview-meta");
+  const previewText = document.getElementById("dilsai-full-material-preview-text");
+
+  if (!preview || !meta || !previewText) return;
+
+  const cleanText = String(text || "").trim();
+  if (!cleanText) {
+    clearFullMaterialPreview();
+    return;
+  }
+
+  const clipped = cleanText.length > 1800
+    ? `${cleanText.slice(0, 1800)}\n\n... prévia cortada. O texto completo foi colocado no campo Material/contexto acima.`
+    : cleanText;
+
+  preview.hidden = false;
+  preview.open = true;
+  meta.textContent = `${fileName} • ${cleanText.length} caracteres extraídos`;
+  previewText.textContent = clipped;
+}
+
+function clearFullMaterialPreview() {
+  const preview = document.getElementById("dilsai-full-material-preview");
+  const meta = document.getElementById("dilsai-full-material-preview-meta");
+  const previewText = document.getElementById("dilsai-full-material-preview-text");
+
+  if (preview) preview.hidden = true;
+  if (meta) meta.textContent = "";
+  if (previewText) previewText.textContent = "";
 }
 
 function isAllowedSimpleMaterialFile(file) {
@@ -706,6 +750,7 @@ function clearFullMaterialUpload() {
     materialFile.value = "";
   }
 
+  clearFullMaterialPreview();
   setFullMaterialStatus("Material carregado removido.", "info");
 }
 
@@ -794,13 +839,14 @@ async function handleFullMaterialFileChange(event) {
     let cleanContent = "";
     let headerType = "material simples carregado localmente no navegador";
     let statusMessage = `Material carregado: ${file.name} (${formatMaterialFileSize(file.size)}).`;
+    let extracted = null;
 
     if (isPdf || isImage) {
       setFullMaterialStatus(
         isPdf ? `Extraindo texto do PDF: ${file.name}...` : `Executando OCR na imagem: ${file.name}...`,
         "info"
       );
-      const extracted = await extractBackendMaterialText(file);
+      extracted = await extractBackendMaterialText(file);
 
       cleanContent = String(extracted?.text || "").trim();
       headerType = isPdf
@@ -850,8 +896,10 @@ async function handleFullMaterialFileChange(event) {
     context.dataset.loadedFileName = file.name;
     context.dataset.loadedFileSize = String(file.size);
 
+    setFullMaterialPreview(file.name, cleanContent);
     setFullMaterialStatus(statusMessage, "success");
   } catch (error) {
+    console.error("DilsAI material upload failed:", error);
     event.target.value = "";
     setFullMaterialStatus("Não consegui ler esse arquivo com segurança. Tente enviar uma imagem mais nítida, um PDF textual ou cole o texto da questão no campo de contexto.", "error");
   }
@@ -1114,4 +1162,68 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", bindSubscriptionSoonButtons);
 } else {
   bindSubscriptionSoonButtons();
+}
+
+// === DilsAI Estudos — Material Drag and Drop V1 ===
+function bindFullMaterialDropzone() {
+  const { materialFile } = getFullStudyElements();
+  const dropzone = document.querySelector(".study-app__upload-box");
+
+  if (!dropzone || !materialFile) return;
+
+  const hasFiles = (event) =>
+    Array.from(event.dataTransfer?.types || []).includes("Files");
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    dropzone.addEventListener(eventName, (event) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      dropzone.classList.add("is-drag-over");
+    });
+  });
+
+  ["dragleave", "dragend"].forEach((eventName) => {
+    dropzone.addEventListener(eventName, () => {
+      dropzone.classList.remove("is-drag-over");
+    });
+  });
+
+  dropzone.addEventListener("drop", (event) => {
+    if (!hasFiles(event)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    dropzone.classList.remove("is-drag-over");
+
+    const file = event.dataTransfer?.files?.[0];
+    if (!file) return;
+
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    materialFile.files = dataTransfer.files;
+
+    handleFullMaterialFileChange({ target: materialFile });
+  });
+
+  // Evita que o navegador abra o arquivo em tela cheia quando o aluno soltar fora da caixa.
+  window.addEventListener("dragover", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+  });
+
+  window.addEventListener("drop", (event) => {
+    if (!hasFiles(event)) return;
+    const isInsideDropzone = dropzone.contains(event.target);
+    if (!isInsideDropzone) {
+      event.preventDefault();
+      setFullMaterialStatus("Solte o arquivo dentro da caixa de envio do material.", "error");
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bindFullMaterialDropzone);
+} else {
+  bindFullMaterialDropzone();
 }
