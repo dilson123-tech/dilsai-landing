@@ -409,7 +409,7 @@ function addMessage(role, text, meta = "") {
   bubble.style.lineHeight = "1.45";
   bubble.innerHTML = `
     <strong style="display:block;margin-bottom:4px;">${isUser ? "Você" : "DilsAI"}</strong>
-    <div>${nl2br(text)}</div>
+    <div class="study-app__message-body">${isUser ? nl2br(text) : renderAssistantHtml(text)}</div>
     ${meta ? `<small style="display:block;margin-top:6px;color:#64748b;">${escapeHtml(meta)}</small>` : ""}
   `;
 
@@ -582,28 +582,83 @@ function normalizeStudyResponseText(text) {
     .trim();
 }
 
+// Escapes de Markdown que viram sujeira visual: \* \_ \` \- \# \. \[ etc.
+const DILSAI_MARKDOWN_ESCAPE = /\\([\\`*_{}\[\]()#+\-.!|>~])/g;
+
+function decodeDilsAINumericEntities(text) {
+  const toChar = (code) => {
+    try {
+      return String.fromCodePoint(code);
+    } catch (error) {
+      return "";
+    }
+  };
+
+  return text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => toChar(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => toChar(parseInt(dec, 10)));
+}
+
+// Limpeza única de toda resposta do assistant antes de renderizar.
 function sanitizeAssistantDisplayText(text) {
-  return String(text || "")
-    .replace(/\\/g, "")
+  return decodeDilsAINumericEntities(String(text || "").replace(/\r\n?/g, "\n"))
+    .replace(/\u00a0/g, " ")
+    .replace(/\u0000/g, "")
+    .replace(DILSAI_MARKDOWN_ESCAPE, "$1")
+    // Reforço: remove escapes repetidos que ainda podem sobrar do modelo/PDF.
+    .replace(/\\+([`*_{}\[\]()#+\-.!|>~])/g, "$1")
+    // Barra invertida solta, barra no fim da linha e barra antes de item de lista.
+    .replace(/^[ \t]*\\+[ \t]*$/gm, "")
+    .replace(/[ \t]*\\+[ \t]*$/gm, "")
+    .replace(/^[ \t]*\\+[ \t]*([-•*]\s+)/gm, "$1")
     .replace(/^\s*-{3,}\s*$/gm, "")
+    .replace(/[ \t]+$/gm, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-function renderStudyMarkdownLite(text) {
-  let html = escapeDilsAIHtml(normalizeStudyResponseText(text))
+function renderStudyProseLite(text) {
+  // Código inline é guardado à parte para não passar pelas regras de fórmula/negrito.
+  const inlineCode = [];
+  return escapeDilsAIHtml(normalizeStudyResponseText(text))
     // Limpeza final: remove barras invertidas que aparecem como sujeira visual no chat.
     .replace(/\\/g, "")
+    .replace(/`([^`\n]+)`/g, (_, code) => `\u0000${inlineCode.push(code) - 1}\u0000`)
+    .replace(/`/g, "")
     .replace(/\[([\s\S]*?)\]/g, '<div class="study-app__formula">$1</div>')
     .replace(/^#{2,4}\s+(.+)$/gm, '<h4 class="study-app__response-heading">$1</h4>')
     .replace(/^\s*(\d+)\.\s+\*\*(.+?)\*\*:?\s*/gm, '<h4 class="study-app__response-heading">$1. $2</h4>')
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/^\s*[-•]\s+(.+)$/gm, '<div class="study-app__list-item">• $1</div>')
+    .replace(/^\s*[-•*]\s+(.+)$/gm, '<div class="study-app__list-item">• $1</div>')
     .replace(/\n{3,}/g, "\n\n")
     .replace(/\n\n/g, '<div class="study-app__paragraph-gap"></div>')
-    .replace(/\n/g, "<br>");
+    .replace(/\n/g, "<br>")
+    .replace(/\u0000(\d+)\u0000/g, (_, i) => `<code class="study-app__inline-code">${inlineCode[i]}</code>`);
+}
 
-  return html;
+function renderStudyMarkdownLite(text) {
+  // Partes ímpares ficam entre cercas ``` (bloco aberto sem fechamento vira código até o fim).
+  return String(text || "")
+    .split(/^[ \t]*```[^\n]*$/m)
+    .map((part, index) => {
+      const trimmed = part.replace(/^\n+|\n+$/g, "");
+      if (!trimmed.trim()) return "";
+      if (index % 2 === 1) {
+        return `<pre class="study-app__code"><code>${escapeDilsAIHtml(trimmed)}</code></pre>`;
+      }
+      return renderStudyProseLite(trimmed);
+    })
+    .join("");
+}
+
+function renderAssistantHtml(text) {
+  return renderStudyMarkdownLite(sanitizeAssistantDisplayText(text))
+    // Trava final contra escapes Markdown que ainda escapem do fluxo normal.
+    .replace(/\\(?=[`*_{}\[\]()#+\-.!|>~])/g, "")
+    // Remove barra que sobra no fim de linha já convertida para HTML.
+    .replace(/\\(?=<br>|<div class="study-app__paragraph-gap">|$)/g, "")
+    .replace(/^[ \t]*\\[ \t]*$/gm, "");
 }
 
 function addFullStudyMessage(role, text, meta) {
@@ -626,7 +681,7 @@ function addFullStudyMessage(role, text, meta) {
   if (role === "user") {
     textNode.textContent = text;
   } else {
-    textNode.innerHTML = renderStudyMarkdownLite(sanitizeAssistantDisplayText(text));
+    textNode.innerHTML = renderAssistantHtml(text);
   }
 
   bubble.appendChild(textNode);
@@ -1139,12 +1194,18 @@ function bindFullStudyChatEvents() {
   });
 
   document.addEventListener("keydown", (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-      const active = document.activeElement;
-      if (active && active.id === "dilsai-full-input") {
-        const { form } = getFullStudyElements();
-        form?.requestSubmit();
-      }
+    const active = document.activeElement;
+
+    if (
+      active &&
+      active.id === "dilsai-full-input" &&
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.isComposing
+    ) {
+      event.preventDefault();
+      const { form } = getFullStudyElements();
+      form?.requestSubmit();
     }
   });
 
