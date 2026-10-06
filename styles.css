@@ -2105,3 +2105,21 @@ body {
   color: #e5e7eb;
   font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
+
+/* DilsAI Estudos — blocos de código nas respostas */
+.study-app__code {
+  margin: 10px 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, .06);
+  white-space: pre;
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.study-app__inline-code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, .07);
+  font: .92em ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
