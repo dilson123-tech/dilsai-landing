@@ -276,6 +276,10 @@
             <small>O conteúdo será usado como contexto. Use .txt, .md, PDF textual, imagem ou print. Para melhor OCR, envie imagem nítida e recortada só na questão.</small>
           </label>
           <input id="dilsai-full-material-file" class="study-app__file-input" type="file" accept=".txt,.md,.pdf,.png,.jpg,.jpeg,.webp,text/plain,text/markdown,application/pdf,image/png,image/jpeg,image/webp" />
+          <div class="study-app__upload-actions">
+            <button id="dilsai-full-camera-trigger" class="study-app__camera-button" type="button">Tirar foto</button>
+          </div>
+          <input id="dilsai-full-camera-file" class="study-app__file-input study-app__camera-input" type="file" accept="image/*" capture="environment" />
           <div id="dilsai-full-material-status" class="study-app__upload-status" aria-live="polite"></div>
           <details id="dilsai-full-material-preview" class="study-app__material-preview" hidden open>
             <summary>Ver texto extraído do material</summary>
@@ -320,6 +324,6 @@
     </div>
   </footer>
 
-  <script src="script.js?v=1791301245"></script>
+  <script src="script.js?v=1791322684"></script>
 </body>
 </html>

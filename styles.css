@@ -474,6 +474,32 @@ input:checked + .slider:before{transform:translateX(20px)}
   font-size: 13px;
 }
 
+.study-app__camera-input {
+  display: none;
+}
+
+.study-app__upload-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.study-app__camera-button {
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 13px;
+  padding: 11px 12px;
+  cursor: pointer;
+}
+
+.study-app__camera-button:hover {
+  background: #1d4ed8;
+}
+
 .study-app__upload-status {
   min-height: 20px;
   margin-top: 8px;
@@ -2017,6 +2043,15 @@ body {
   background: #1e293b;
   color: #e5e7eb;
   border-color: rgba(148, 163, 184, .30);
+}
+
+#dilsai-study-app .study-app__camera-button {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+#dilsai-study-app .study-app__camera-button:hover {
+  background: #1d4ed8;
 }
 
 #dilsai-study-app .study-app__notice {

@@ -553,6 +553,8 @@ function getFullStudyElements() {
     materialFile: document.getElementById("dilsai-full-material-file"),
     materialStatus: document.getElementById("dilsai-full-material-status"),
     materialClear: document.getElementById("dilsai-full-material-clear"),
+    cameraButton: document.getElementById("dilsai-full-camera-trigger"),
+    cameraFile: document.getElementById("dilsai-full-camera-file"),
   };
 }
 
@@ -798,7 +800,7 @@ function isAllowedSimpleMaterialFile(file) {
 
 
 function clearFullMaterialUpload() {
-  const { context, materialFile } = getFullStudyElements();
+  const { context, materialFile, cameraFile } = getFullStudyElements();
 
   if (context) {
     const loadedFileName = context.dataset.loadedFileName || "";
@@ -813,6 +815,10 @@ function clearFullMaterialUpload() {
 
   if (materialFile) {
     materialFile.value = "";
+  }
+
+  if (cameraFile) {
+    cameraFile.value = "";
   }
 
   clearFullMaterialPreview();
@@ -1170,6 +1176,14 @@ function bindFullStudyChatEvents() {
       return;
     }
 
+    const cameraButton = event.target.closest("#dilsai-full-camera-trigger");
+    if (cameraButton) {
+      event.preventDefault();
+      const { cameraFile } = getFullStudyElements();
+      if (cameraFile) cameraFile.click();
+      return;
+    }
+
     const clearMaterialButton = event.target.closest("#dilsai-full-material-clear");
     if (clearMaterialButton) {
       event.preventDefault();
@@ -1178,7 +1192,7 @@ function bindFullStudyChatEvents() {
   });
 
   document.addEventListener("change", (event) => {
-    if (event.target && event.target.id === "dilsai-full-material-file") {
+    if (event.target && (event.target.id === "dilsai-full-material-file" || event.target.id === "dilsai-full-camera-file")) {
       handleFullMaterialFileChange(event);
     }
   });
