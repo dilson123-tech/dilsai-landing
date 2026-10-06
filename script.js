@@ -582,9 +582,19 @@ function normalizeStudyResponseText(text) {
     .trim();
 }
 
+function sanitizeAssistantDisplayText(text) {
+  return String(text || "")
+    .replace(/\\/g, "")
+    .replace(/^\s*-{3,}\s*$/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function renderStudyMarkdownLite(text) {
   let html = escapeDilsAIHtml(normalizeStudyResponseText(text))
-    .replace(/\\\[([\s\S]*?)\\\]/g, '<div class="study-app__formula">$1</div>')
+    // Limpeza final: remove barras invertidas que aparecem como sujeira visual no chat.
+    .replace(/\\/g, "")
+    .replace(/\[([\s\S]*?)\]/g, '<div class="study-app__formula">$1</div>')
     .replace(/^#{2,4}\s+(.+)$/gm, '<h4 class="study-app__response-heading">$1</h4>')
     .replace(/^\s*(\d+)\.\s+\*\*(.+?)\*\*:?\s*/gm, '<h4 class="study-app__response-heading">$1. $2</h4>')
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
@@ -616,7 +626,7 @@ function addFullStudyMessage(role, text, meta) {
   if (role === "user") {
     textNode.textContent = text;
   } else {
-    textNode.innerHTML = renderStudyMarkdownLite(text);
+    textNode.innerHTML = renderStudyMarkdownLite(sanitizeAssistantDisplayText(text));
   }
 
   bubble.appendChild(textNode);
