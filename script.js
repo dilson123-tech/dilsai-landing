@@ -1099,3 +1099,19 @@ if (document.readyState === "loading") {
   bindFullStudyChatEvents();
 }
 
+
+// === DilsAI Estudos — Subscription placeholder V1 ===
+function bindSubscriptionSoonButtons() {
+  document.querySelectorAll("[data-subscription-soon]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const plan = button.dataset.subscriptionSoon === "anual" ? "anual" : "mensal";
+      alert(`Plano ${plan} em preparação. A assinatura será ativada pelo checkout da Play Store quando o app Android for publicado.`);
+    });
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bindSubscriptionSoonButtons);
+} else {
+  bindSubscriptionSoonButtons();
+}

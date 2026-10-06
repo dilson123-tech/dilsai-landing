@@ -700,3 +700,1001 @@ input:checked + .slider:before{transform:translateX(20px)}
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   white-space: pre-wrap;
 }
+
+/* === DilsAI Estudos — App Like Home V1 === */
+:root {
+  --app-bg: #eef4ff;
+  --app-ink: #0f172a;
+  --app-muted: #52627a;
+  --app-blue: #2563eb;
+  --app-violet: #7c3aed;
+  --app-cyan: #06b6d4;
+  --app-card: rgba(255, 255, 255, .92);
+  --app-line: rgba(15, 23, 42, .10);
+  --app-shadow: 0 22px 70px rgba(15, 23, 42, .14);
+  --app-radius: 26px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, .13), transparent 36rem),
+    radial-gradient(circle at top right, rgba(124, 58, 237, .12), transparent 32rem),
+    var(--app-bg);
+  color: var(--app-ink);
+}
+
+.container {
+  max-width: 1180px;
+}
+
+/* Header com cara de app */
+.nav {
+  background: rgba(255, 255, 255, .78);
+  border-bottom: 1px solid rgba(15, 23, 42, .08);
+  backdrop-filter: blur(16px) saturate(160%);
+  z-index: 100;
+}
+
+.nav__inner {
+  min-height: 66px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo {
+  display: none;
+}
+
+.brand::before {
+  content: "D";
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  color: #fff;
+  font-weight: 950;
+  background: linear-gradient(135deg, var(--app-blue), var(--app-violet));
+  box-shadow: 0 12px 28px rgba(37, 99, 235, .30);
+}
+
+.brand::after {
+  content: "DilsAI Estudos";
+  color: #111827;
+  font-weight: 950;
+  letter-spacing: -.03em;
+}
+
+.nav a {
+  margin-left: 8px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  color: #334155;
+}
+
+.nav a:hover {
+  background: rgba(37, 99, 235, .08);
+  color: #1d4ed8;
+}
+
+/* Hero compacto, forte e com mockup visual */
+.hero {
+  padding: 46px 0 34px;
+  background:
+    linear-gradient(135deg, #0f172a 0%, #1e3a8a 46%, #4c1d95 100%);
+  color: #fff;
+  overflow: hidden;
+}
+
+.hero__inner {
+  max-width: 1180px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 380px);
+  align-items: center;
+  gap: 34px;
+  position: relative;
+}
+
+.hero__eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .18);
+  color: #dbeafe;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  max-width: 720px;
+  margin: 18px 0 14px;
+  font-size: clamp(36px, 5vw, 58px);
+  line-height: 1.02;
+  letter-spacing: -.055em;
+}
+
+.hero p {
+  max-width: 650px;
+  margin: 0 0 22px;
+  color: #dbeafe;
+  font-size: clamp(17px, 2vw, 20px);
+  line-height: 1.6;
+}
+
+.hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hero__cta .btn {
+  margin: 0;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn--primary {
+  border: 0;
+  background: linear-gradient(135deg, #22c55e, #06b6d4 45%, #3b82f6);
+  color: #fff;
+  box-shadow: 0 16px 36px rgba(6, 182, 212, .28);
+}
+
+.btn--ghost {
+  background: rgba(255, 255, 255, .92);
+  color: #1d4ed8;
+  border-color: rgba(255, 255, 255, .35);
+}
+
+.btn--quiet {
+  background: rgba(255, 255, 255, .10);
+  color: #e0f2fe;
+  border: 1px solid rgba(255, 255, 255, .16);
+}
+
+.hero__trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+  max-width: 760px;
+}
+
+.hero__trust span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: #e0f2fe;
+  background: rgba(255, 255, 255, .10);
+  border: 1px solid rgba(255, 255, 255, .12);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.hero__trust span::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, .13);
+}
+
+.hero__inner::after {
+  content: "Professor DilsAI\a\aQuestão: 20% de desconto em R$ 150\a\a1. Lê o enunciado\a2. Mostra os dados\a3. Resolve passo a passo\a\aResposta: R$ 30 de desconto\aPreço final: R$ 120";
+  white-space: pre-line;
+  display: block;
+  padding: 26px;
+  min-height: 360px;
+  border-radius: 34px;
+  color: #e5edff;
+  font-weight: 800;
+  line-height: 1.48;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06)),
+    rgba(15, 23, 42, .52);
+  border: 1px solid rgba(255, 255, 255, .18);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .34);
+  backdrop-filter: blur(18px);
+}
+
+/* Seções como cartões de aplicativo */
+.features,
+.plans,
+.cta,
+.study-app {
+  background: transparent;
+}
+
+.features,
+.plans {
+  padding: 46px 0;
+}
+
+.section-heading {
+  max-width: 760px;
+}
+
+.section-heading span,
+.section-heading--center span {
+  display: inline-flex;
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #dbeafe;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.section-heading h2 {
+  margin: 12px 0 8px;
+  font-size: clamp(26px, 3vw, 38px);
+  line-height: 1.08;
+  letter-spacing: -.035em;
+}
+
+.section-heading p {
+  color: var(--app-muted);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.grid-3 {
+  gap: 18px;
+}
+
+.card {
+  border: 1px solid var(--app-line);
+  border-radius: 22px;
+  padding: 24px;
+  background: var(--app-card);
+  box-shadow: 0 16px 44px rgba(15, 23, 42, .08);
+}
+
+.features .card::before {
+  content: "✦";
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 16px;
+  border-radius: 16px;
+  color: #fff;
+  font-weight: 950;
+  background: linear-gradient(135deg, var(--app-blue), var(--app-violet));
+}
+
+.card h3 {
+  color: #0f172a;
+  font-size: 19px;
+  letter-spacing: -.02em;
+}
+
+.card p,
+.card li {
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+/* Avisos deixam de ser paredões e viram cartões compactos */
+.education-notice {
+  padding: 10px 0;
+  background: transparent;
+}
+
+.education-notice__inner {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(280px, 1.1fr);
+  gap: 22px;
+  align-items: center;
+  padding: 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .88);
+  border: 1px solid var(--app-line);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, .07);
+}
+
+.notice-pill {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.education-notice h2 {
+  margin: 10px 0 8px;
+  font-size: clamp(21px, 2.5vw, 30px);
+  letter-spacing: -.025em;
+}
+
+.education-notice p {
+  margin: 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.education-notice ul {
+  margin: 0;
+  padding: 16px 18px;
+  list-style: none;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, .07);
+}
+
+.education-notice li {
+  margin: 8px 0;
+  color: #334155;
+  font-weight: 700;
+}
+
+.education-notice li::before {
+  content: "✓";
+  margin-right: 8px;
+  color: #16a34a;
+  font-weight: 950;
+}
+
+/* Planos mais comerciais */
+.plan {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.plan .btn {
+  margin-top: auto;
+  text-align: center;
+}
+
+.plan--highlight {
+  border-color: rgba(124, 58, 237, .42);
+  box-shadow: 0 22px 60px rgba(124, 58, 237, .16);
+}
+
+.price {
+  color: #1d4ed8;
+}
+
+/* CTA como painel de app */
+.cta {
+  padding: 34px 0;
+}
+
+.cta__inner {
+  padding: 34px;
+  border-radius: 28px;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  box-shadow: var(--app-shadow);
+}
+
+.cta p {
+  color: #dbeafe;
+}
+
+/* Área principal com cara de aplicativo */
+.study-app {
+  padding: 46px 0 60px;
+}
+
+.study-app__inner {
+  border-radius: 32px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid var(--app-line);
+  box-shadow: var(--app-shadow);
+}
+
+.study-app__sidebar {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, .12), transparent 18rem),
+    #f8fafc;
+}
+
+.study-app__badge {
+  width: fit-content;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.study-app__sidebar h2 {
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.08;
+}
+
+.study-app__field span {
+  font-size: 12px;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.study-app__field select,
+.study-app__field textarea,
+.study-app__form textarea {
+  border-radius: 16px;
+  border-color: #dbe3ef;
+  background: #fff;
+}
+
+#dilsai-full-context {
+  min-height: 118px;
+}
+
+.study-app__upload-box {
+  border-radius: 18px;
+  background: #eef6ff;
+  border-color: #93c5fd;
+}
+
+.study-app__notice {
+  border-radius: 18px;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.study-app__chat {
+  border-left: 1px solid #e2e8f0;
+}
+
+.study-app__chat-header {
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+}
+
+.study-app__messages {
+  min-height: 470px;
+}
+
+.study-app__form button {
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+}
+
+/* Respiro final */
+.footer {
+  background: rgba(255, 255, 255, .8);
+}
+
+@media (max-width: 980px) {
+  .hero__inner {
+    grid-template-columns: 1fr;
+  }
+
+  .hero__inner::after {
+    min-height: auto;
+  }
+
+  .education-notice__inner {
+    grid-template-columns: 1fr;
+  }
+
+  .study-app__chat {
+    border-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .nav__inner {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .nav a {
+    margin-left: 0;
+    padding: 8px 9px;
+    font-size: 13px;
+  }
+
+  .hero {
+    padding: 34px 0 28px;
+  }
+
+  .hero__inner::after {
+    font-size: 13px;
+    border-radius: 24px;
+    padding: 18px;
+  }
+
+  .hero__cta .btn {
+    width: 100%;
+  }
+
+  .education-notice__inner,
+  .cta__inner {
+    padding: 20px;
+  }
+
+  .study-app {
+    padding: 28px 0 40px;
+  }
+
+  .study-app__inner {
+    border-radius: 24px;
+  }
+}
+
+/* === DilsAI Estudos — Compact Drawers V1 === */
+.app-drawer-section {
+  padding: 22px 0;
+  background: transparent;
+}
+
+.app-drawers {
+  display: grid;
+  gap: 12px;
+}
+
+.app-drawer {
+  border: 1px solid rgba(15, 23, 42, .10);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 14px 38px rgba(15, 23, 42, .07);
+  overflow: hidden;
+}
+
+.app-drawer summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.app-drawer summary::-webkit-details-marker {
+  display: none;
+}
+
+.app-drawer summary span {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.app-drawer summary strong {
+  flex: 1;
+  color: #0f172a;
+  font-size: 18px;
+  letter-spacing: -.02em;
+}
+
+.app-drawer summary::after {
+  content: "+";
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.app-drawer[open] summary::after {
+  content: "−";
+}
+
+.app-drawer__content {
+  padding: 0 22px 20px;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.app-drawer__content p {
+  margin: 0 0 14px;
+}
+
+.app-drawer__content ul {
+  margin: 0;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.app-drawer__content li {
+  margin: 7px 0;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .app-drawer summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .app-drawer summary::after {
+    position: absolute;
+    right: 18px;
+  }
+
+  .app-drawer {
+    position: relative;
+  }
+
+  .app-drawer summary strong {
+    padding-right: 42px;
+  }
+}
+
+/* === DilsAI Estudos — Ajustes finos V1 === */
+
+/* Campo de material/contexto maior para colar textos, questões e prints */
+#dilsai-full-context {
+  min-height: 220px;
+  max-height: 420px;
+  resize: vertical;
+}
+
+/* Dá mais conforto para a coluna de configuração do app */
+.study-app__sidebar {
+  min-width: 340px;
+}
+
+/* Remove a CTA intermediária que confundia a área de planos */
+#cta {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .study-app__sidebar {
+    min-width: 0;
+  }
+
+  #dilsai-full-context {
+    min-height: 180px;
+  }
+}
+
+/* === DilsAI Estudos — Pricing V1 === */
+.pricing-grid {
+  align-items: stretch;
+}
+
+.plan-note {
+  margin: -8px 0 16px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.plan .price {
+  font-size: 30px;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.plan--highlight .price {
+  color: #1d4ed8;
+}
+
+.school-plan {
+  margin-top: 18px;
+  padding: 20px 22px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, .10), rgba(124, 58, 237, .10));
+  border: 1px solid rgba(37, 99, 235, .16);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.school-plan strong {
+  display: block;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.school-plan span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+@media (max-width: 760px) {
+  .school-plan {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .school-plan .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* === DilsAI Estudos — Correção faixa plano escola V1 === */
+#plans .school-plan {
+  max-width: 100%;
+  margin: 22px auto 0;
+  padding: 22px 24px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, .10), rgba(124, 58, 237, .12));
+  border: 1px solid rgba(37, 99, 235, .18);
+  box-shadow: 0 14px 42px rgba(15, 23, 42, .08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  text-align: left;
+}
+
+#plans .school-plan > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+#plans .school-plan strong {
+  color: #0f172a;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+#plans .school-plan span {
+  color: #64748b;
+  font-size: 15px;
+}
+
+#plans .school-plan .btn {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+#plans .footnote {
+  max-width: 760px;
+  margin: 20px auto 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  #plans .school-plan {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #plans .school-plan .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* === DilsAI Estudos — Billing Panels V1 === */
+.billing-panel {
+  display: none;
+  margin: 22px auto 0;
+  max-width: 760px;
+  padding: 24px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, .18);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, .10);
+  text-align: left;
+}
+
+.billing-panel:target {
+  display: block;
+}
+
+.billing-panel span {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.billing-panel h3 {
+  margin: 12px 0 8px;
+  color: #0f172a;
+  font-size: 24px;
+}
+
+.billing-panel p {
+  margin: 0 0 16px;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+.billing-panel .btn:disabled {
+  opacity: .75;
+  cursor: not-allowed;
+}
+
+/* === DilsAI Estudos — Fix Billing Layout Final V1 === */
+
+/* Corrige faixa escola/professor */
+#plans .school-plan {
+  margin: 24px auto 0 !important;
+  padding: 22px 24px !important;
+  border-radius: 24px !important;
+  background: linear-gradient(135deg, rgba(37, 99, 235, .10), rgba(124, 58, 237, .12)) !important;
+  border: 1px solid rgba(37, 99, 235, .18) !important;
+  box-shadow: 0 14px 42px rgba(15, 23, 42, .08) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+  text-align: left !important;
+}
+
+#plans .school-plan > div {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+}
+
+#plans .school-plan strong {
+  display: block !important;
+  color: #0f172a !important;
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+}
+
+#plans .school-plan span {
+  display: block !important;
+  color: #64748b !important;
+  font-size: 15px !important;
+}
+
+#plans .school-plan .btn {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+/* Painéis de cobrança: fechados por padrão */
+#plans .billing-panel {
+  display: none !important;
+  margin: 24px auto 0 !important;
+  max-width: 760px !important;
+  padding: 24px !important;
+  border-radius: 24px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(37, 99, 235, .18) !important;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, .10) !important;
+  text-align: left !important;
+}
+
+/* Abre somente o painel clicado */
+#plans .billing-panel:target {
+  display: block !important;
+}
+
+#plans .billing-panel span {
+  display: inline-flex !important;
+  padding: 6px 10px !important;
+  border-radius: 999px !important;
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+  font-size: 12px !important;
+  font-weight: 950 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .06em !important;
+}
+
+#plans .billing-panel h3 {
+  margin: 12px 0 8px !important;
+  color: #0f172a !important;
+  font-size: 24px !important;
+}
+
+#plans .billing-panel p {
+  margin: 0 0 16px !important;
+  color: #64748b !important;
+  line-height: 1.55 !important;
+}
+
+#plans .billing-panel .btn:disabled {
+  opacity: .75 !important;
+  cursor: not-allowed !important;
+}
+
+@media (max-width: 760px) {
+  #plans .school-plan {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  #plans .school-plan .btn {
+    width: 100% !important;
+    text-align: center !important;
+  }
+}
+
+/* === DilsAI Estudos — Pricing Clean Final V1 === */
+.plan .btn:disabled {
+  opacity: .75;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #64748b, #475569);
+  color: #fff;
+  border: 0;
+}
+
+.school-plan {
+  margin: 24px auto 0;
+  padding: 22px 24px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, .10), rgba(124, 58, 237, .12));
+  border: 1px solid rgba(37, 99, 235, .18);
+  box-shadow: 0 14px 42px rgba(15, 23, 42, .08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  text-align: left;
+}
+
+.school-plan > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.school-plan strong {
+  display: block;
+  color: #0f172a;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.school-plan span {
+  display: block;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.school-plan .btn {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .school-plan {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .school-plan .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
