@@ -23,8 +23,8 @@ android {
         applicationId = "com.dilsai.estudos"
         minSdk = 23
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.3-release-aab"
+        versionCode = 4
+        versionName = "0.3.6-native-camera-capture"
     }
 
     signingConfigs {
@@ -65,4 +65,8 @@ tasks.matching {
             "Release keystore not found. Check storeFile in ~/.dilsai-estudos-signing/release.properties"
         }
     }
+}
+
+dependencies {
+    implementation("androidx.core:core:1.13.1")
 }
