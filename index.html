@@ -34,6 +34,7 @@
       <nav aria-label="Navegação principal">
         <a href="#features">Recursos</a>
         <a href="#plans">Planos</a>
+        <a href="#dilsai-study-app">Estudar</a>
         <a href="#" class="btn btn--ghost">Experimente</a>
       </nav>
     </div>
@@ -41,24 +42,27 @@
 
   <section class="hero hero--study">
     <div class="container hero__inner">
-      <div class="hero__eyebrow">DilsAI Estudos • Beta educacional em evolução</div>
-      <h1>Estude com uma IA que explica questões passo a passo.</h1>
-      <p>
-        Digite uma dúvida, cole uma questão ou envie um print. O DilsAI usa o material como contexto e explica o raciocínio de forma simples, útil e responsável.
-      </p>
-      <div class="hero__cta">
-        <button type="button" class="btn btn--primary" data-open-study-chat>Testar o DilsAI agora</button>
-        <button type="button" class="btn btn--ghost" data-ask>Abrir demonstração rápida</button>
-        <a href="#education-notice" class="btn btn--quiet">Ver uso responsável</a>
+      <div class="hero__content">
+        <div class="hero__eyebrow">DilsAI Estudos • Beta educacional em evolução</div>
+        <h1>Estude com uma IA que explica questões passo a passo.</h1>
+        <p>
+          Digite uma dúvida, cole uma questão ou envie um print. O DilsAI usa o material como contexto e explica o raciocínio de forma simples, útil e responsável.
+        </p>
+        <div class="hero__cta">
+          <button type="button" class="btn btn--primary" data-open-study-chat>Testar o DilsAI agora</button>
+          <button type="button" class="btn btn--ghost" data-ask>Abrir demonstração rápida</button>
+          <a href="#education-notice" class="btn btn--quiet">Ver uso responsável</a>
+        </div>
+        <div class="hero__trust">
+          <span>Questão em texto</span>
+          <span>Print/imagem com OCR</span>
+          <span>Explicação passo a passo</span>
+          <span>Fonte/contexto</span>
+          <span>Fallback seguro</span>
+        </div>
       </div>
-      <div class="hero__trust">
-        <span>Questão em texto</span>
-        <span>Print/imagem com OCR</span>
-        <span>Explicação passo a passo</span>
-        <span>Fonte/contexto</span>
-        <span>Fallback seguro</span>
-      </div>
-    </div>
+
+</div>
   </section>
 
   <section id="features" class="features">
@@ -273,6 +277,11 @@
           </label>
           <input id="dilsai-full-material-file" class="study-app__file-input" type="file" accept=".txt,.md,.pdf,.png,.jpg,.jpeg,.webp,text/plain,text/markdown,application/pdf,image/png,image/jpeg,image/webp" />
           <div id="dilsai-full-material-status" class="study-app__upload-status" aria-live="polite"></div>
+          <details id="dilsai-full-material-preview" class="study-app__material-preview" hidden open>
+            <summary>Ver texto extraído do material</summary>
+            <div id="dilsai-full-material-preview-meta" class="study-app__material-preview-meta"></div>
+            <pre id="dilsai-full-material-preview-text"></pre>
+          </details>
           <button id="dilsai-full-material-clear" class="study-app__clear-material" type="button">Limpar material</button>
         </div>
 

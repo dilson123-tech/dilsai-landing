@@ -73,12 +73,12 @@ def test_material_endpoint_rate_limit_returns_429_for_expensive_route():
         first = client.post(
             "/api/v1/materials/extract-text",
             content=b"not-a-supported-file",
-            headers={"Content-Type": "text/plain"},
+            headers={"Content-Type": "application/octet-stream"},
         )
         second = client.post(
             "/api/v1/materials/extract-text",
             content=b"not-a-supported-file",
-            headers={"Content-Type": "text/plain"},
+            headers={"Content-Type": "application/octet-stream"},
         )
 
         assert first.status_code == 415

@@ -189,7 +189,31 @@ async def extract_material_text(request: Request) -> dict:
             detail="Arquivo muito grande para o upload OCR/PDF simples V1. Use um arquivo menor.",
         )
 
+    text_types = {"text/plain", "text/markdown"}
     image_types = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
+
+    if (
+        content_type in text_types
+        or file_name.lower().endswith(".txt")
+        or file_name.lower().endswith(".md")
+    ):
+        try:
+            extracted_text = data.decode("utf-8").strip()
+        except UnicodeDecodeError:
+            extracted_text = data.decode("latin-1", errors="replace").strip()
+
+        if not extracted_text:
+            raise HTTPException(status_code=400, detail="Não foi possível ler texto do arquivo enviado.")
+
+        return {
+            "ok": True,
+            "source_type": "text",
+            "file_name": file_name,
+            "char_count": len(extracted_text),
+            "text": extracted_text,
+            "notice": "Texto extraído do arquivo enviado pelo aluno.",
+            "ocr_page_limit": None,
+        }
 
     if content_type == "application/pdf":
         if not data.startswith(b"%PDF"):
@@ -295,7 +319,7 @@ async def extract_material_text(request: Request) -> dict:
 
     raise HTTPException(
         status_code=415,
-        detail="Tipo de arquivo não suportado. Use PDF textual ou imagem PNG/JPG/JPEG/WEBP.",
+        detail="Tipo de arquivo não suportado. Use TXT, MD, PDF textual ou imagem PNG/JPG/JPEG/WEBP.",
     )
 
 
