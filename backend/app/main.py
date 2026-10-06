@@ -63,6 +63,8 @@ settings = get_settings()
 rate_limiter = InMemoryRateLimiter()
 
 SCANNED_PDF_OCR_MAX_PAGES = 3
+
+IMAGE_OCR_MAX_SIDE = 1600
 SCANNED_PDF_OCR_DPI = 220
 
 app = FastAPI(
@@ -144,6 +146,22 @@ async def health() -> dict:
         "version": settings.app_version,
         "environment": settings.app_env,
     }
+
+
+
+def _prepare_image_for_ocr(image):
+    from PIL import ImageOps
+
+    image = ImageOps.exif_transpose(image)
+    original_size = image.size
+
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+
+    image.thumbnail((IMAGE_OCR_MAX_SIDE, IMAGE_OCR_MAX_SIDE))
+
+    processed_size = image.size
+    return image, original_size, processed_size
 
 
 
@@ -282,6 +300,7 @@ async def extract_material_text(request: Request) -> dict:
             from pytesseract import TesseractNotFoundError
 
             image = Image.open(BytesIO(data))
+            image, original_size, processed_size = _prepare_image_for_ocr(image)
             text = pytesseract.image_to_string(image, lang="por+eng")
             extracted_text = (text or "").strip()
 
@@ -304,6 +323,8 @@ async def extract_material_text(request: Request) -> dict:
                 "ocr_languages": "por+eng",
                 "ocr_processed_pages": 1,
                 "ocr_page_limit": None,
+                "image_original_size": list(original_size),
+                "image_processed_size": list(processed_size),
             }
 
         except TesseractNotFoundError as exc:
