@@ -21,10 +21,10 @@ android {
 
     defaultConfig {
         applicationId = "com.dilsai.estudos"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.3.7-play-prep"
+        versionCode = 6
+        versionName = "0.3.8-play-sdk24"
     }
 
     signingConfigs {
