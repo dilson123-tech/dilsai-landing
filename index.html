@@ -264,11 +264,6 @@
           </select>
         </label>
 
-        <label class="study-app__field" for="dilsai-full-context">
-          <span>Material/contexto opcional</span>
-          <textarea id="dilsai-full-context" rows="7" autocomplete="off" data-lpignore="true" data-form-type="other" placeholder="Cole aqui o texto da questão, trecho do material ou use Ctrl+V para colar um print nítido."></textarea>
-        </label>
-
         <div class="study-app__field study-app__field--upload">
           <span>Enviar material simples</span>
           <label class="study-app__upload-box" for="dilsai-full-material-file">
@@ -280,12 +275,7 @@
             <button id="dilsai-full-camera-trigger" class="study-app__camera-button" type="button">Tirar foto</button>
           </div>
           <input id="dilsai-full-camera-file" class="study-app__file-input study-app__camera-input" type="file" accept="image/*" capture="environment" />
-          <div id="dilsai-full-material-status" class="study-app__upload-status" aria-live="polite"></div>
-          <details id="dilsai-full-material-preview" class="study-app__material-preview" hidden open>
-            <summary>Ver texto extraído do material</summary>
-            <div id="dilsai-full-material-preview-meta" class="study-app__material-preview-meta"></div>
-            <pre id="dilsai-full-material-preview-text"></pre>
-          </details>
+          <small class="study-app__upload-side-hint">O status e a prévia do material aparecem no painel principal, ao lado.</small>
           <button id="dilsai-full-material-clear" class="study-app__clear-material" type="button">Limpar material</button>
         </div>
 
@@ -301,6 +291,18 @@
             <span>IA educacional com explicação passo a passo</span>
           </div>
           <button type="button" class="study-app__clear" data-clear-study-chat>Limpar conversa</button>
+        </div>
+
+        <div id="dilsai-full-context-panel" class="study-app__field study-app__field--context study-app__context-panel">
+          <label class="study-app__context-title" for="dilsai-full-context">Texto extraído do material</label>
+          <small class="study-app__context-hint">Revise o texto antes de enviar. Se estiver confuso, fotografe mais perto ou envie outra imagem.</small>
+          <div id="dilsai-full-material-status" class="study-app__upload-status study-app__context-status" role="status" aria-live="polite"></div>
+          <textarea id="dilsai-full-context" rows="8" autocomplete="off" data-lpignore="true" data-form-type="other"></textarea>
+          <details id="dilsai-full-material-preview" class="study-app__material-preview" hidden>
+            <summary>Ver prévia do texto extraído</summary>
+            <div id="dilsai-full-material-preview-meta" class="study-app__material-preview-meta"></div>
+            <pre id="dilsai-full-material-preview-text"></pre>
+          </details>
         </div>
 
         <div id="dilsai-full-messages" class="study-app__messages" aria-live="polite"></div>
