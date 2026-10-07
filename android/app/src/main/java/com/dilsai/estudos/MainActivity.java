@@ -5,9 +5,14 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -27,6 +32,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.lang.ref.WeakReference;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -37,16 +43,32 @@ public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
     private static final int ANDROID_CAMERA_REQUEST_CODE = 1002;
     private static final String MATERIAL_EXTRACT_URL = "https://dilsai-api.onrender.com/api/v1/materials/extract-text";
+    private static final String TAG = "DilsAICamera";
+    private static final int OCR_MAX_IMAGE_SIDE = 800;
+    private static final int OCR_JPEG_QUALITY = 80;
+    private static final String STATE_CAMERA_CAPTURE_PATH = "dilsai_camera_capture_path";
+
+    // Sobrevivem à recriação da Activity (mesmo processo) enquanto o OCR roda em background.
+    private static WeakReference<MainActivity> currentInstance = new WeakReference<>(null);
+    private static String pendingCameraResultJson;
 
     private WebView webView;
+    private boolean webPageReady;
     private ValueCallback<Uri[]> filePathCallback;
     private Uri cameraCaptureUri;
     private File cameraCaptureFile;
+    private String cameraCapturePath;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        currentInstance = new WeakReference<>(this);
+
+        if (savedInstanceState != null) {
+            cameraCapturePath = savedInstanceState.getString(STATE_CAMERA_CAPTURE_PATH);
+            cameraCaptureFile = cameraCapturePath == null ? null : new File(cameraCapturePath);
+        }
 
         webView = new WebView(this);
         setContentView(webView);
@@ -59,7 +81,20 @@ public class MainActivity extends Activity {
         settings.setUseWideViewPort(true);
 
         webView.addJavascriptInterface(new AndroidCameraBridge(), "DilsAIAndroidCamera");
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                webPageReady = false;
+                super.onPageStarted(view, url, favicon);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                webPageReady = true;
+                deliverPendingCameraResult();
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(
@@ -72,8 +107,7 @@ public class MainActivity extends Activity {
                 }
 
                 MainActivity.this.filePathCallback = filePathCallback;
-                MainActivity.this.cameraCaptureUri = null;
-                MainActivity.this.cameraCaptureFile = null;
+                clearCameraCapture();
 
                 Intent intent = null;
 
@@ -94,8 +128,7 @@ public class MainActivity extends Activity {
                     startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
                 } catch (ActivityNotFoundException error) {
                     MainActivity.this.filePathCallback = null;
-                    MainActivity.this.cameraCaptureUri = null;
-                    MainActivity.this.cameraCaptureFile = null;
+                    clearCameraCapture();
                     return false;
                 }
 
@@ -103,16 +136,15 @@ public class MainActivity extends Activity {
             }
         });
 
-        if (savedInstanceState == null) {
+        if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
             webView.loadUrl(getString(R.string.dilsai_url));
-        } else {
-            webView.restoreState(savedInstanceState);
         }
     }
 
     private class AndroidCameraBridge {
         @JavascriptInterface
         public void openCamera() {
+            Log.d(TAG, "JS bridge openCamera");
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -133,8 +165,7 @@ public class MainActivity extends Activity {
     }
 
     private void launchNativeCameraForOcr() {
-        cameraCaptureUri = null;
-        cameraCaptureFile = null;
+        clearCameraCapture();
 
         Intent intent = createCameraCaptureIntent();
         if (intent == null) {
@@ -145,6 +176,7 @@ public class MainActivity extends Activity {
         try {
             startActivityForResult(intent, ANDROID_CAMERA_REQUEST_CODE);
         } catch (ActivityNotFoundException error) {
+            clearCameraCapture();
             sendCameraStatusToWeb("Não encontrei aplicativo de câmera neste aparelho.", "error");
         }
     }
@@ -201,6 +233,7 @@ public class MainActivity extends Activity {
             );
 
             cameraCaptureFile = photoFile;
+            cameraCapturePath = photoFile.getAbsolutePath();
             cameraCaptureUri = photoUri;
 
             cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
@@ -210,8 +243,8 @@ public class MainActivity extends Activity {
 
             return cameraIntent;
         } catch (IOException error) {
-            cameraCaptureFile = null;
-            cameraCaptureUri = null;
+            Log.e(TAG, "Could not create camera image file", error);
+            clearCameraCapture();
             return null;
         }
     }
@@ -241,22 +274,32 @@ public class MainActivity extends Activity {
                 HttpURLConnection connection = null;
 
                 try {
-                    byte[] bytes = readAllBytes(file);
+                    Log.d(TAG, "OCR upload start path=" + file.getAbsolutePath()
+                            + " exists=" + file.exists()
+                            + " length=" + file.length());
+
+                    byte[] bytes = prepareImageForOcr(file);
+                    Log.d(TAG, "OCR prepared image bytes=" + bytes.length);
+
                     URL url = new URL(MATERIAL_EXTRACT_URL);
 
                     connection = (HttpURLConnection) url.openConnection();
                     connection.setRequestMethod("POST");
                     connection.setConnectTimeout(30000);
-                    connection.setReadTimeout(60000);
+                    connection.setReadTimeout(120000);
                     connection.setDoOutput(true);
+                    connection.setFixedLengthStreamingMode(bytes.length);
                     connection.setRequestProperty("Content-Type", "image/jpeg");
                     connection.setRequestProperty("X-File-Name", URLEncoder.encode(file.getName(), StandardCharsets.UTF_8.name()));
 
+                    Log.d(TAG, "OCR before getOutputStream");
                     try (OutputStream output = connection.getOutputStream()) {
                         output.write(bytes);
                     }
+                    Log.d(TAG, "OCR after write bytes=" + bytes.length);
 
                     int statusCode = connection.getResponseCode();
+                    Log.d(TAG, "OCR backend status=" + statusCode);
                     InputStream responseStream = statusCode >= 200 && statusCode < 300
                             ? connection.getInputStream()
                             : connection.getErrorStream();
@@ -279,6 +322,7 @@ public class MainActivity extends Activity {
 
                     sendCameraResultToWeb(payload);
                 } catch (Exception error) {
+                    Log.e(TAG, "OCR upload failed", error);
                     sendCameraStatusToWeb("Não consegui processar a foto. Tente novamente ou use Enviar material.", "error");
                 } finally {
                     if (connection != null) {
@@ -287,6 +331,101 @@ public class MainActivity extends Activity {
                 }
             }
         }).start();
+    }
+
+    // Reduz a foto da câmera (maior lado <= 800 px, JPEG 80) para o upload de OCR não estourar o timeout.
+    private byte[] prepareImageForOcr(File file) throws IOException {
+        Bitmap bitmap = null;
+
+        try {
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(file.getAbsolutePath(), bounds);
+
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                throw new IOException("Invalid image bounds");
+            }
+
+            int sampleSize = 1;
+            while (Math.max(bounds.outWidth, bounds.outHeight) / (sampleSize * 2) >= OCR_MAX_IMAGE_SIDE) {
+                sampleSize *= 2;
+            }
+
+            BitmapFactory.Options decodeOptions = new BitmapFactory.Options();
+            decodeOptions.inSampleSize = sampleSize;
+            bitmap = BitmapFactory.decodeFile(file.getAbsolutePath(), decodeOptions);
+
+            if (bitmap == null) {
+                throw new IOException("Could not decode image");
+            }
+
+            bitmap = replaceBitmap(bitmap, rotateBitmapFromExif(file, bitmap));
+
+            int longestSide = Math.max(bitmap.getWidth(), bitmap.getHeight());
+            if (longestSide > OCR_MAX_IMAGE_SIDE) {
+                float scale = (float) OCR_MAX_IMAGE_SIDE / longestSide;
+                int width = Math.max(1, Math.round(bitmap.getWidth() * scale));
+                int height = Math.max(1, Math.round(bitmap.getHeight() * scale));
+                bitmap = replaceBitmap(bitmap, Bitmap.createScaledBitmap(bitmap, width, height, true));
+            }
+
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, OCR_JPEG_QUALITY, output)) {
+                throw new IOException("Could not compress image");
+            }
+
+            Log.d(TAG, "OCR image original=" + bounds.outWidth + "x" + bounds.outHeight
+                    + " (" + file.length() + " bytes)"
+                    + " processed=" + bitmap.getWidth() + "x" + bitmap.getHeight()
+                    + " (" + output.size() + " bytes)"
+                    + " inSampleSize=" + sampleSize);
+
+            return output.toByteArray();
+        } catch (Exception | OutOfMemoryError error) {
+            Log.e(TAG, "OCR image preparation failed, sending original file", error);
+            return readAllBytes(file);
+        } finally {
+            if (bitmap != null) {
+                bitmap.recycle();
+            }
+        }
+    }
+
+    private Bitmap rotateBitmapFromExif(File file, Bitmap bitmap) {
+        int degrees;
+
+        try {
+            ExifInterface exif = new ExifInterface(file.getAbsolutePath());
+            int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+
+            switch (orientation) {
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    degrees = 90;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    degrees = 180;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    degrees = 270;
+                    break;
+                default:
+                    return bitmap;
+            }
+        } catch (IOException error) {
+            Log.e(TAG, "Could not read EXIF orientation", error);
+            return bitmap;
+        }
+
+        Matrix matrix = new Matrix();
+        matrix.postRotate(degrees);
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+    }
+
+    private Bitmap replaceBitmap(Bitmap current, Bitmap next) {
+        if (next != current) {
+            current.recycle();
+        }
+        return next;
     }
 
     private byte[] readAllBytes(File file) throws IOException {
@@ -340,31 +479,72 @@ public class MainActivity extends Activity {
     }
 
     private void sendCameraResultToWeb(final JSONObject payload) {
-        runOnUiThread(new Runnable() {
+        // Guarda o resultado até a página confirmar que recebeu (a Activity/WebView pode ter sido recriada).
+        pendingCameraResultJson = payload.toString();
+
+        MainActivity target = currentInstance.get();
+        if (target == null) target = this;
+
+        final MainActivity activity = target;
+        activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (webView == null) return;
-
-                String script = "window.dilsaiSetMaterialFromAndroidCamera && window.dilsaiSetMaterialFromAndroidCamera("
-                        + payload.toString()
-                        + ");";
-
-                webView.evaluateJavascript(script, null);
+                activity.deliverPendingCameraResult();
             }
         });
+    }
+
+    private void deliverPendingCameraResult() {
+        final String json = pendingCameraResultJson;
+        if (json == null || webView == null || !webPageReady) return;
+
+        String script = "(function(){"
+                + "if (typeof window.dilsaiSetMaterialFromAndroidCamera !== 'function') return false;"
+                + "window.dilsaiSetMaterialFromAndroidCamera(" + json + ");"
+                + "return true;"
+                + "})();";
+
+        webView.evaluateJavascript(script, new ValueCallback<String>() {
+            @Override
+            public void onReceiveValue(String value) {
+                boolean delivered = "true".equals(value);
+                Log.d(TAG, "Camera OCR result delivered=" + delivered);
+
+                // Se a página ainda não tinha a função, o próximo onPageFinished tenta de novo.
+                if (delivered && json.equals(pendingCameraResultJson)) {
+                    pendingCameraResultJson = null;
+                }
+            }
+        });
+    }
+
+    private File getCurrentCameraCaptureFile() {
+        if (cameraCaptureFile != null) return cameraCaptureFile;
+        if (cameraCapturePath != null) return new File(cameraCapturePath);
+        return null;
+    }
+
+    private void clearCameraCapture() {
+        cameraCaptureUri = null;
+        cameraCaptureFile = null;
+        cameraCapturePath = null;
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == ANDROID_CAMERA_REQUEST_CODE) {
-            if (resultCode == RESULT_OK && cameraCaptureFile != null && cameraCaptureFile.exists()) {
-                uploadCapturedImageToBackend(cameraCaptureFile);
+            File capturedFile = getCurrentCameraCaptureFile();
+            logCameraResult(requestCode, resultCode, capturedFile);
+
+            if (resultCode == RESULT_OK && isUsableCapture(capturedFile)) {
+                uploadCapturedImageToBackend(capturedFile);
+            } else if (resultCode == RESULT_OK) {
+                sendCameraStatusToWeb("A foto não foi salva pela câmera. Tente novamente.", "error");
             } else {
                 sendCameraStatusToWeb("Captura cancelada.", "info");
             }
 
-            cameraCaptureUri = null;
-            cameraCaptureFile = null;
+            clearCameraCapture();
             return;
         }
 
@@ -374,29 +554,50 @@ public class MainActivity extends Activity {
                 return;
             }
 
+            File capturedFile = getCurrentCameraCaptureFile();
+            if (capturedFile != null) {
+                logCameraResult(requestCode, resultCode, capturedFile);
+            }
+
+            if (resultCode == RESULT_OK && isUsableCapture(capturedFile)) {
+                // Foto da câmera: OCR nativo; o input file do WebView recebe cancelamento.
+                filePathCallback.onReceiveValue(null);
+                filePathCallback = null;
+                clearCameraCapture();
+                uploadCapturedImageToBackend(capturedFile);
+                return;
+            }
+
             Uri[] results = null;
 
-            if (resultCode == RESULT_OK) {
-                if (cameraCaptureUri != null) {
-                    results = new Uri[]{cameraCaptureUri};
-                } else {
-                    results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
-                }
+            if (resultCode == RESULT_OK && capturedFile == null) {
+                results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
             }
 
             filePathCallback.onReceiveValue(results);
             filePathCallback = null;
-            cameraCaptureUri = null;
-            cameraCaptureFile = null;
+            clearCameraCapture();
             return;
         }
 
         super.onActivityResult(requestCode, resultCode, data);
     }
 
+    private boolean isUsableCapture(File file) {
+        return file != null && file.exists() && file.length() > 0;
+    }
+
+    private void logCameraResult(int requestCode, int resultCode, File file) {
+        Log.d(TAG, "onActivityResult requestCode=" + requestCode
+                + " resultCode=" + resultCode
+                + " exists=" + (file != null && file.exists())
+                + " size=" + (file == null ? 0 : file.length()));
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         webView.saveState(outState);
+        outState.putString(STATE_CAMERA_CAPTURE_PATH, cameraCapturePath);
         super.onSaveInstanceState(outState);
     }
 
