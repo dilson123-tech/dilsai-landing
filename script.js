@@ -692,22 +692,8 @@ function addFullStudyMessage(role, text, meta) {
   messages.scrollTop = messages.scrollHeight;
 }
 
-function ensureFullStudyWelcome() {
-  const { messages } = getFullStudyElements();
-  if (!messages || messages.dataset.welcome === "1") return;
-
-  addFullStudyMessage(
-    "assistant",
-    "Olá! Eu sou o Professor DilsAI. Envie uma dúvida, cole o texto de uma questão ou mande um print/imagem para eu explicar passo a passo. Use como apoio de estudo, não para burlar avaliações.",
-    "Bem-vindo"
-  );
-
-  messages.dataset.welcome = "1";
-}
-
 function openFullStudyChat() {
   const { section, input } = getFullStudyElements();
-  ensureFullStudyWelcome();
 
   if (section) {
     section.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -719,9 +705,8 @@ function openFullStudyChat() {
 function clearFullStudyChat() {
   const { messages } = getFullStudyElements();
   if (!messages) return;
+  // A conversa começa vazia (sem mensagem de boas-vindas), para não ocupar espaço no celular.
   messages.innerHTML = "";
-  messages.dataset.welcome = "";
-  ensureFullStudyWelcome();
 }
 
 
@@ -782,6 +767,21 @@ function clearFullMaterialPreview() {
   if (previewText) previewText.textContent = "";
 }
 
+// O bridge Android converte JSON null em "null" (optString), então filtramos aqui.
+function getMaterialExtractionWarning(warning) {
+  if (typeof warning !== "string") return "";
+  const clean = warning.trim();
+  if (!clean || clean === "null" || clean === "undefined") return "";
+  return clean;
+}
+
+const DILSAI_SHORT_OCR_MIN_CHARS = 80;
+const DILSAI_SHORT_OCR_MESSAGE = "OCR concluído, mas o texto parece curto. Para melhorar, aproxime a câmera e fotografe somente a questão.";
+
+function isShortOcrText(text) {
+  return String(text || "").replace(/\s+/g, " ").trim().length < DILSAI_SHORT_OCR_MIN_CHARS;
+}
+
 function setFullMaterialFromAndroidCamera(data) {
   const { context, materialFile, cameraFile } = getFullStudyElements();
 
@@ -793,7 +793,7 @@ function setFullMaterialFromAndroidCamera(data) {
   const charCount = Number(data?.char_count || cleanContent.length || 0);
 
   if (!cleanContent) {
-    setFullMaterialStatus(data?.warning || "Não consegui extrair texto dessa foto. Tente uma imagem mais nítida.", "error");
+    setFullMaterialStatus(getMaterialExtractionWarning(data?.warning) || "Não consegui extrair texto dessa foto. Tente uma imagem mais nítida.", "error");
     return;
   }
 
@@ -803,8 +803,9 @@ function setFullMaterialFromAndroidCamera(data) {
     "Tipo: OCR de imagem capturada pela câmera do Android",
   ];
 
-  if (data?.warning) {
-    headerLines.push(`Aviso de extração: ${data.warning}`);
+  const warning = getMaterialExtractionWarning(data?.warning);
+  if (warning) {
+    headerLines.push(`Aviso de extração: ${warning}`);
   }
 
   context.value = `${headerLines.join("\n")}\n\n${cleanContent}`;
@@ -815,7 +816,12 @@ function setFullMaterialFromAndroidCamera(data) {
   if (cameraFile) cameraFile.value = "";
 
   setFullMaterialPreview(fileName, cleanContent);
-  setFullMaterialStatus(`OCR concluído: ${fileName} (${charCount} caracteres).`, "success");
+  setFullMaterialStatus(
+    isShortOcrText(cleanContent)
+      ? `${DILSAI_SHORT_OCR_MESSAGE} (${charCount} caracteres)`
+      : `OCR concluído: ${fileName} (${charCount} caracteres).`,
+    "success"
+  );
   appendCameraOcrToChatInput(cleanContent);
 }
 
@@ -1014,7 +1020,7 @@ async function handleFullMaterialFileChange(event) {
         setFullMaterialStatus(
           isPdf
             ? DILSAI_PDF_NO_TEXT_MESSAGE
-            : extracted?.warning || "Não foi possível extrair texto deste arquivo.",
+            : getMaterialExtractionWarning(extracted?.warning) || "Não foi possível extrair texto deste arquivo.",
           "error"
         );
         return;
@@ -1024,7 +1030,9 @@ async function handleFullMaterialFileChange(event) {
         ? extracted?.source_type === "pdf_ocr"
           ? `PDF escaneado processado por OCR: ${file.name} (${extracted.char_count || cleanContent.length} caracteres). Se a leitura ficar ruim, envie um print mais nítido.`
           : `PDF extraído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`
-        : `OCR concluído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`;
+        : isShortOcrText(cleanContent)
+          ? `${DILSAI_SHORT_OCR_MESSAGE} (${extracted.char_count || cleanContent.length} caracteres)`
+          : `OCR concluído: ${file.name} (${extracted.char_count || cleanContent.length} caracteres).`;
     } else {
       const content = await file.text();
       cleanContent = String(content || "").trim();
@@ -1042,8 +1050,9 @@ async function handleFullMaterialFileChange(event) {
       `Tipo: ${headerType}`,
     ];
 
-    if ((isPdf || isImage) && extracted?.warning) {
-      headerLines.push(`Aviso de extração: ${extracted.warning}`);
+    const extractionWarning = getMaterialExtractionWarning(extracted?.warning);
+    if ((isPdf || isImage) && extractionWarning) {
+      headerLines.push(`Aviso de extração: ${extractionWarning}`);
     }
 
     const header = headerLines.join("\n");
@@ -1254,7 +1263,6 @@ async function handleFullStudySubmit(event) {
 function bindFullStudyChatEvents() {
   populateFullStudyTaxonomyOptions();
   clearLeakedMetaContextIfNeeded();
-  ensureFullStudyWelcome();
 
   document.addEventListener("click", (event) => {
     const openButton = event.target.closest("[data-open-study-chat]");

@@ -2297,3 +2297,43 @@ body {
     max-height: 200px;
   }
 }
+
+/* === DilsAI Estudos — Mobile: textos longos não saem do card (OCR/câmera) === */
+@media (max-width: 860px) {
+  #dilsai-study-app .study-app__context-panel,
+  #dilsai-study-app .study-app__material-preview,
+  #dilsai-study-app .study-app__upload-box,
+  #dilsai-study-app .study-app__field--upload {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  #dilsai-study-app .study-app__context-panel {
+    overflow: hidden;
+  }
+
+  #dilsai-study-app .study-app__context-status,
+  #dilsai-study-app .study-app__upload-status,
+  #dilsai-study-app .study-app__material-preview summary,
+  #dilsai-study-app .study-app__material-preview-meta,
+  #dilsai-study-app .study-app__material-preview pre,
+  #dilsai-study-app .study-app__upload-box strong,
+  #dilsai-study-app .study-app__upload-box small,
+  #dilsai-study-app .study-app__upload-side-hint {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  #dilsai-study-app .study-app__material-preview pre {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  #dilsai-study-app #dilsai-full-context {
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}

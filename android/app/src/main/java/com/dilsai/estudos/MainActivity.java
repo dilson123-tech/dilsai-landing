@@ -45,7 +45,7 @@ public class MainActivity extends Activity {
     private static final String MATERIAL_EXTRACT_URL = "https://dilsai-api.onrender.com/api/v1/materials/extract-text";
     private static final String TAG = "DilsAICamera";
     private static final int OCR_MAX_IMAGE_SIDE = 800;
-    private static final int OCR_JPEG_QUALITY = 80;
+    private static final int OCR_JPEG_QUALITY = 85;
     private static final String STATE_CAMERA_CAPTURE_PATH = "dilsai_camera_capture_path";
 
     // Sobrevivem à recriação da Activity (mesmo processo) enquanto o OCR roda em background.
@@ -333,7 +333,8 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    // Reduz a foto da câmera (maior lado <= 800 px, JPEG 80) para o upload de OCR não estourar o timeout.
+    // Reduz a foto da câmera (maior lado <= 800 px, JPEG 85) para o upload de OCR não estourar o timeout.
+    // O backend também limita a imagem a 800 px (IMAGE_OCR_MAX_SIDE), então enviar maior só aumentaria o upload.
     private byte[] prepareImageForOcr(File file) throws IOException {
         Bitmap bitmap = null;
 
