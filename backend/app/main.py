@@ -64,7 +64,7 @@ rate_limiter = InMemoryRateLimiter()
 
 SCANNED_PDF_OCR_MAX_PAGES = 3
 
-IMAGE_OCR_MAX_SIDE = 1600
+IMAGE_OCR_MAX_SIDE = 800
 SCANNED_PDF_OCR_DPI = 220
 
 app = FastAPI(

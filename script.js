@@ -809,6 +809,21 @@ function setFullMaterialFromAndroidCamera(data) {
 
   setFullMaterialPreview(fileName, cleanContent);
   setFullMaterialStatus(`OCR concluído: ${fileName} (${charCount} caracteres).`, "success");
+  appendCameraOcrToChatInput(cleanContent);
+}
+
+function appendCameraOcrToChatInput(ocrText) {
+  const { input } = getFullStudyElements();
+
+  if (!input) return;
+
+  const currentValue = String(input.value || "").trim();
+
+  input.value = currentValue
+    ? `${currentValue}\n\n---\n${ocrText}`
+    : `Resolva ou explique passo a passo esta questão capturada pela câmera:\n\n${ocrText}`;
+
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 window.dilsaiSetMaterialFromAndroidCamera = setFullMaterialFromAndroidCamera;
