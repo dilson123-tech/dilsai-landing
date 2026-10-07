@@ -725,7 +725,9 @@ function clearFullStudyChat() {
 }
 
 
-const DILSAI_SIMPLE_MATERIAL_MAX_BYTES = 5 * 1024 * 1024;
+// Mesmo limite do backend (max_bytes = 5_000_000).
+const DILSAI_SIMPLE_MATERIAL_MAX_BYTES = 5_000_000;
+const DILSAI_PDF_NO_TEXT_MESSAGE = "Não consegui extrair texto desse arquivo. Se for PDF escaneado, envie uma imagem nítida da questão ou cole o texto no painel.";
 
 function formatMaterialFileSize(size) {
   if (!Number.isFinite(size)) return "";
@@ -740,6 +742,11 @@ function setFullMaterialStatus(message, type = "info") {
 
   materialStatus.textContent = message || "";
   materialStatus.dataset.status = type;
+
+  const contextPanel = document.getElementById("dilsai-full-context-panel");
+  if (contextPanel) {
+    contextPanel.dataset.materialStatus = message ? type : "";
+  }
 }
 
 function setFullMaterialPreview(fileName, text) {
@@ -756,11 +763,11 @@ function setFullMaterialPreview(fileName, text) {
   }
 
   const clipped = cleanText.length > 1800
-    ? `${cleanText.slice(0, 1800)}\n\n... prévia cortada. O texto completo foi colocado no campo Material/contexto acima.`
+    ? `${cleanText.slice(0, 1800)}\n\n... prévia cortada. O texto completo foi colocado no painel Texto extraído do material.`
     : cleanText;
 
   preview.hidden = false;
-  preview.open = true;
+  preview.open = false;
   meta.textContent = `${fileName} • ${cleanText.length} caracteres extraídos`;
   previewText.textContent = clipped;
 }
@@ -910,11 +917,28 @@ function isImageMaterialFile(file) {
 }
 
 
+// Alguns seletores (Android/WebView e desktop) entregam file.type vazio.
+// O backend decide o tipo pelo Content-Type, então inferimos pela extensão.
+function getMaterialUploadContentType(file) {
+  const type = String(file?.type || "").toLowerCase();
+  if (type && type !== "application/octet-stream") return type;
+
+  const name = String(file?.name || "").toLowerCase();
+  if (name.endsWith(".pdf")) return "application/pdf";
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+  if (name.endsWith(".webp")) return "image/webp";
+  if (name.endsWith(".md")) return "text/markdown";
+  if (name.endsWith(".txt")) return "text/plain";
+
+  return "application/octet-stream";
+}
+
 async function extractBackendMaterialText(file) {
   const response = await fetch(window.MATERIAL_EXTRACT_URL, {
     method: "POST",
     headers: {
-      "Content-Type": file.type || "application/octet-stream",
+      "Content-Type": getMaterialUploadContentType(file),
       "X-File-Name": encodeURIComponent(file.name || "material"),
     },
     body: file,
@@ -929,7 +953,9 @@ async function extractBackendMaterialText(file) {
 
   if (!response.ok) {
     const detail = data?.detail || `HTTP ${response.status}`;
-    throw new Error(detail);
+    const error = new Error(detail);
+    error.status = response.status;
+    throw error;
   }
 
   return data;
@@ -960,9 +986,10 @@ async function handleFullMaterialFileChange(event) {
     return;
   }
 
+  const isPdf = isPdfMaterialFile(file);
+  const isImage = isImageMaterialFile(file);
+
   try {
-    const isPdf = isPdfMaterialFile(file);
-    const isImage = isImageMaterialFile(file);
     let cleanContent = "";
     let headerType = "material simples carregado localmente no navegador";
     let statusMessage = `Material carregado: ${file.name} (${formatMaterialFileSize(file.size)}).`;
@@ -985,7 +1012,9 @@ async function handleFullMaterialFileChange(event) {
       if (!cleanContent) {
         event.target.value = "";
         setFullMaterialStatus(
-          extracted?.warning || "Não foi possível extrair texto deste arquivo.",
+          isPdf
+            ? DILSAI_PDF_NO_TEXT_MESSAGE
+            : extracted?.warning || "Não foi possível extrair texto deste arquivo.",
           "error"
         );
         return;
@@ -1028,7 +1057,17 @@ async function handleFullMaterialFileChange(event) {
   } catch (error) {
     console.error("DilsAI material upload failed:", error);
     event.target.value = "";
-    setFullMaterialStatus("Não consegui ler esse arquivo com segurança. Tente enviar uma imagem mais nítida, um PDF textual ou cole o texto da questão no campo de contexto.", "error");
+    let errorMessage = "Não consegui ler esse arquivo com segurança. Tente enviar uma imagem mais nítida, um PDF textual ou cole o texto da questão no painel.";
+
+    if (error?.status === 429) {
+      errorMessage = "Muitos envios em pouco tempo. Aguarde um minuto e tente enviar o material de novo.";
+    } else if (error?.status === 413) {
+      errorMessage = "Esse arquivo está muito grande para o beta atual. Envie um arquivo menor ou recorte só a questão.";
+    } else if (isPdf && error?.status) {
+      errorMessage = DILSAI_PDF_NO_TEXT_MESSAGE;
+    }
+
+    setFullMaterialStatus(errorMessage, "error");
   }
 }
 

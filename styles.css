@@ -2158,3 +2158,142 @@ body {
   background: rgba(15, 23, 42, .07);
   font: .92em ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
+
+/* === DilsAI Estudos — Painel de texto extraído do material V1 === */
+/* App de estudo usa a largura da tela no desktop */
+#dilsai-study-app .container.study-app__inner {
+  max-width: 1440px;
+}
+
+/* Painel fica na coluna principal, entre o cabeçalho e a conversa */
+#dilsai-study-app .study-app__context-panel {
+  flex: none;
+  margin: 16px 20px 0;
+  padding: 16px;
+  border: 1px solid rgba(96, 165, 250, .5);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(37, 99, 235, .16), rgba(15, 23, 42, .5));
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .28);
+}
+
+#dilsai-study-app .study-app__context-panel .study-app__context-title {
+  margin-bottom: 4px;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#dilsai-study-app .study-app__context-hint {
+  display: block;
+  margin-bottom: 12px;
+  color: #bfdbfe;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+#dilsai-study-app #dilsai-full-context {
+  display: block;
+  width: 100%;
+  min-height: 230px;
+  max-height: 50vh;
+  padding: 14px 16px;
+  overflow-y: auto;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Status do material em destaque dentro do painel principal */
+#dilsai-study-app .study-app__context-status {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+#dilsai-study-app .study-app__context-status:empty {
+  display: none;
+}
+
+#dilsai-study-app .study-app__context-status[data-status] {
+  padding: 10px 12px;
+  border: 1px solid rgba(96, 165, 250, .45);
+  border-radius: 12px;
+  background: rgba(37, 99, 235, .14);
+  color: #dbeafe;
+}
+
+#dilsai-study-app .study-app__context-status[data-status="success"] {
+  border-color: rgba(74, 222, 128, .55);
+  background: rgba(22, 163, 74, .16);
+  color: #bbf7d0;
+}
+
+#dilsai-study-app .study-app__context-status[data-status="error"] {
+  border-color: rgba(248, 113, 113, .65);
+  background: rgba(220, 38, 38, .18);
+  color: #fecaca;
+}
+
+/* Borda do painel acompanha o resultado do upload/OCR */
+#dilsai-study-app .study-app__context-panel[data-material-status="success"] {
+  border-color: rgba(74, 222, 128, .7);
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, .18), 0 10px 30px rgba(15, 23, 42, .28);
+}
+
+#dilsai-study-app .study-app__context-panel[data-material-status="error"] {
+  border-color: rgba(248, 113, 113, .75);
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, .18), 0 10px 30px rgba(15, 23, 42, .28);
+}
+
+#dilsai-study-app .study-app__context-panel .study-app__material-preview {
+  margin-top: 10px;
+}
+
+#dilsai-study-app .study-app__material-preview pre {
+  max-height: 220px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+#dilsai-study-app .study-app__upload-side-hint {
+  display: block;
+  margin-top: 8px;
+  color: #93c5fd;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Conversa mantém espaço próprio e rola internamente */
+#dilsai-study-app .study-app__context-panel ~ .study-app__messages {
+  min-height: 420px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 860px) {
+  #dilsai-study-app .study-app__context-panel {
+    margin: 12px 10px 0;
+    padding: 12px;
+  }
+
+  #dilsai-study-app #dilsai-full-context {
+    min-height: 220px;
+    max-height: 55vh;
+    padding: 12px 14px;
+  }
+
+  #dilsai-study-app .study-app__context-panel ~ .study-app__messages {
+    min-height: 360px;
+    max-height: 65vh;
+  }
+
+  #dilsai-study-app .study-app__material-preview pre {
+    max-height: 200px;
+  }
+}
