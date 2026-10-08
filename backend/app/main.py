@@ -1,13 +1,14 @@
 from io import BytesIO
 
 from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.schemas import ChatRequest, ChatResponse
+from app.schemas import ChatRequest, ChatResponse, StudyLevel, StudyTopic
 from app.services.knowledge import find_knowledge_context
-from app.services.llm import generate_study_answer
+from app.services.llm import ImageAnswerUnavailable, generate_image_study_answer, generate_study_answer
 from app.services.rate_limit import InMemoryRateLimiter, get_client_identifier
 
 
@@ -65,6 +66,13 @@ rate_limiter = InMemoryRateLimiter()
 SCANNED_PDF_OCR_MAX_PAGES = 3
 
 IMAGE_OCR_MAX_SIDE = 800
+# Imagem para a IA de visão: mais legível que a do OCR, mas com payload controlado.
+IMAGE_VISION_MAX_SIDE = 1600
+IMAGE_VISION_FALLBACK_SIDE = 1280
+IMAGE_VISION_MAX_ENCODED_BYTES = 1_500_000
+IMAGE_UPLOAD_MAX_BYTES = 5_000_000
+IMAGE_MAX_PIXELS = 40_000_000
+IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
 SCANNED_PDF_OCR_DPI = 220
 
 app = FastAPI(
@@ -79,7 +87,7 @@ def _expensive_route_limit(path: str) -> tuple[str | None, int | None]:
     if path == "/api/v1/chat":
         return "chat", settings.rate_limit_chat_per_minute
 
-    if path == "/api/v1/materials/extract-text":
+    if path in ("/api/v1/materials/extract-text", "/api/v1/materials/solve-image"):
         return "materials", settings.rate_limit_material_per_minute
 
     return None, None
@@ -342,6 +350,150 @@ async def extract_material_text(request: Request) -> dict:
         status_code=415,
         detail="Tipo de arquivo não suportado. Use TXT, MD, PDF textual ou imagem PNG/JPG/JPEG/WEBP.",
     )
+
+
+class InvalidImageError(ValueError):
+    pass
+
+
+def _prepare_image_for_vision(data: bytes) -> dict:
+    from PIL import Image, ImageOps
+
+    try:
+        with Image.open(BytesIO(data)) as probe:
+            width, height = probe.size
+            probe.verify()
+    except Exception as exc:
+        raise InvalidImageError("Arquivo não parece ser uma imagem válida.") from exc
+
+    if width * height > IMAGE_MAX_PIXELS:
+        raise InvalidImageError("Imagem com resolução grande demais. Tire a foto com resolução menor.")
+
+    try:
+        image = Image.open(BytesIO(data))
+        image = ImageOps.exif_transpose(image)
+        original_size = image.size
+
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        encoded = b""
+        for max_side, quality in (
+            (IMAGE_VISION_MAX_SIDE, 85),
+            (IMAGE_VISION_MAX_SIDE, 72),
+            (IMAGE_VISION_FALLBACK_SIDE, 70),
+        ):
+            candidate = image.copy()
+            candidate.thumbnail((max_side, max_side))
+            buffer = BytesIO()
+            candidate.save(buffer, format="JPEG", quality=quality, optimize=True)
+            encoded = buffer.getvalue()
+            if len(encoded) <= IMAGE_VISION_MAX_ENCODED_BYTES:
+                break
+    except Exception as exc:
+        raise InvalidImageError("Não foi possível processar a imagem enviada.") from exc
+
+    return {
+        "image": candidate,
+        "jpeg": encoded,
+        "original_size": original_size,
+        "processed_size": candidate.size,
+    }
+
+
+def _ocr_hint_for_vision(image) -> str:
+    """OCR rápido só como apoio para a IA de visão. Falhas são ignoradas."""
+    try:
+        import pytesseract
+
+        ocr_image = image.copy()
+        ocr_image.thumbnail((IMAGE_OCR_MAX_SIDE, IMAGE_OCR_MAX_SIDE))
+        return (pytesseract.image_to_string(ocr_image, lang="por+eng", timeout=15) or "").strip()
+    except Exception:
+        return ""
+
+
+def _enum_header(request: Request, name: str, enum_cls, default):
+    value = (request.headers.get(name) or "").strip()
+    try:
+        return enum_cls(value) if value else default
+    except ValueError:
+        return default
+
+
+@app.post("/api/v1/materials/solve-image")
+async def solve_image_question(request: Request) -> dict:
+    raw_content_type = request.headers.get("content-type", "")
+    content_type = raw_content_type.split(";", 1)[0].strip().lower()
+    data = await request.body()
+
+    if not data:
+        raise HTTPException(status_code=400, detail="Imagem vazia. Tire outra foto e tente novamente.")
+
+    if len(data) > IMAGE_UPLOAD_MAX_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Imagem muito grande. Envie uma foto de até 5 MB.",
+        )
+
+    if content_type not in IMAGE_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail="Tipo de imagem não suportado. Use JPEG, PNG ou WEBP.",
+        )
+
+    try:
+        prepared = await run_in_threadpool(_prepare_image_for_vision, data)
+    except InvalidImageError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    topic = _enum_header(request, "x-study-topic", StudyTopic, StudyTopic.geral)
+    level = _enum_header(request, "x-study-level", StudyLevel, StudyLevel.geral)
+    ocr_hint = await run_in_threadpool(_ocr_hint_for_vision, prepared["image"])
+
+    try:
+        answer = await run_in_threadpool(
+            generate_image_study_answer,
+            prepared["jpeg"],
+            settings,
+            topic,
+            level,
+            ocr_hint,
+        )
+    except ImageAnswerUnavailable as exc:
+        detail = (
+            "Resolver pela foto está indisponível no momento: a IA de visão não está configurada."
+            if exc.reason == "missing_api_key"
+            else "Não consegui analisar a foto agora. Tente novamente em instantes ou use \"Ler texto desta foto\"."
+        )
+        raise HTTPException(status_code=503, detail=detail) from exc
+
+    warning = None
+    if len(ocr_hint) < 20:
+        warning = (
+            "O texto da foto ficou difícil de ler automaticamente. "
+            "Confira se a resposta corresponde à sua questão; se não, tire outra foto mais perto e com boa luz."
+        )
+
+    return {
+        "ok": True,
+        "status": "success",
+        "source_type": "image_vision",
+        "response": answer,
+        "answer": answer,
+        "notice": (
+            "Resposta gerada pela IA a partir da foto, para estudo. "
+            "Confira o enunciado e use a explicação para aprender o raciocínio."
+        ),
+        "warning": warning,
+        "model": settings.vision_model,
+        "topic": topic.value,
+        "level": level.value,
+        "ocr_char_count": len(ocr_hint),
+        "image_original_size": list(prepared["original_size"]),
+        "image_processed_size": list(prepared["processed_size"]),
+        "image_bytes": len(prepared["jpeg"]),
+    }
 
 
 @app.post("/api/v1/chat", response_model=ChatResponse)

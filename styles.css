@@ -2415,6 +2415,16 @@ body {
   color: #cbd5e1;
 }
 
+#dilsai-study-app .study-app__photo-review-button[hidden] {
+  display: none;
+}
+
+/* Com "Resolver pela foto" disponível, a leitura de texto vira opção secundária. */
+#dilsai-study-app .study-app__photo-review[data-solve="true"] #dilsai-full-photo-ocr {
+  background: rgba(15, 23, 42, .6);
+  border-color: rgba(148, 163, 184, .35);
+}
+
 #dilsai-study-app .study-app__photo-review-button:disabled {
   opacity: .55;
   cursor: wait;

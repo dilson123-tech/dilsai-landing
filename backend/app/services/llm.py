@@ -1,7 +1,10 @@
 from app.config import Settings
 from app.schemas import ChatRequest
 from app.services.knowledge import find_knowledge_context
-from app.services.prompts import build_system_prompt
+import base64
+
+from app.schemas import StudyLevel, StudyTopic
+from app.services.prompts import build_image_question_prompt, build_system_prompt
 from app.services.academic_accuracy import build_basic_arithmetic_answer, build_basic_school_fact_answer, build_basic_unit_conversion_answer, build_deterministic_context_answer, build_internal_knowledge_answer, build_no_context_answer
 
 
@@ -162,3 +165,76 @@ async def generate_study_answer(payload: ChatRequest, settings: Settings) -> str
             user_context=user_context,
         )
 
+
+class ImageAnswerUnavailable(Exception):
+    """A IA de visão não pôde responder (sem chave, erro do provedor ou resposta vazia)."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
+def generate_image_study_answer(
+    image_jpeg: bytes,
+    settings: Settings,
+    topic: StudyTopic = StudyTopic.geral,
+    level: StudyLevel = StudyLevel.geral,
+    ocr_hint: str = "",
+    user_question: str = "",
+) -> str:
+    if not settings.openai_api_key.strip():
+        raise ImageAnswerUnavailable("missing_api_key")
+
+    ocr_hint = ocr_hint.strip()[:3000]
+    user_question = user_question.strip()[:500]
+
+    text_parts = ["Leia a questão nesta foto e me ajude a entender a resolução."]
+    if user_question:
+        text_parts.append(f"Pedido do aluno: {user_question}")
+    if ocr_hint:
+        text_parts.append(
+            "Texto de OCR automático (apoio, pode conter erros):\n" + ocr_hint
+        )
+
+    image_b64 = base64.b64encode(image_jpeg).decode("ascii")
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=settings.openai_api_key.strip(), timeout=60.0)
+        response = client.chat.completions.create(
+            model=settings.vision_model,
+            temperature=settings.llm_temperature,
+            max_tokens=settings.llm_vision_max_tokens,
+            messages=[
+                {
+                    "role": "system",
+                    "content": build_image_question_prompt(
+                        topic=topic,
+                        level=level,
+                        has_ocr_hint=bool(ocr_hint),
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "\n\n".join(text_parts)},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_b64}",
+                                "detail": "high",
+                            },
+                        },
+                    ],
+                },
+            ],
+        )
+    except Exception as exc:
+        raise ImageAnswerUnavailable("llm_error") from exc
+
+    content = (response.choices[0].message.content or "").strip()
+    if not content:
+        raise ImageAnswerUnavailable("empty_response")
+
+    return content

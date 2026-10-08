@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     llm_temperature: float = 0.2
     llm_max_tokens: int = 900
+    # Modelo com visão para "Resolver pela foto". Vazio = usa llm_model.
+    llm_vision_model: str = ""
+    llm_vision_max_tokens: int = 1200
     openai_api_key: str = Field(default="", repr=False)
 
     rate_limit_enabled: bool = True
@@ -33,6 +36,10 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def vision_model(self) -> str:
+        return self.llm_vision_model.strip() or self.llm_model
 
     @property
     def cors_origins_list(self) -> list[str]:

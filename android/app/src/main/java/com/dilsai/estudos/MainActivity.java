@@ -45,11 +45,16 @@ public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
     private static final int ANDROID_CAMERA_REQUEST_CODE = 1002;
     private static final String MATERIAL_EXTRACT_URL = "https://dilsai-api.onrender.com/api/v1/materials/extract-text";
+    private static final String MATERIAL_SOLVE_IMAGE_URL = "https://dilsai-api.onrender.com/api/v1/materials/solve-image";
     private static final String TAG = "DilsAICamera";
+    private static final String SOLVE_TAG = "DilsAIImageSolve";
     private static final int OCR_MAX_IMAGE_SIDE = 800;
     private static final int OCR_JPEG_QUALITY = 85;
     private static final int PREVIEW_MAX_IMAGE_SIDE = 1280;
     private static final int PREVIEW_JPEG_QUALITY = 80;
+    // "Resolver pela foto": a IA de visão precisa de mais detalhe que o OCR (backend aceita até 1600 px).
+    private static final int SOLVE_MAX_IMAGE_SIDE = 1600;
+    private static final int SOLVE_JPEG_QUALITY = 85;
     private static final String STATE_CAMERA_CAPTURE_PATH = "dilsai_camera_capture_path";
     private static final String STATE_PENDING_PHOTO_PATH = "dilsai_pending_photo_path";
     private static final String OCR_RETRY_MESSAGE = "Não consegui ler esta foto agora. Tente tirar outra foto mais perto ou tente novamente.";
@@ -57,6 +62,7 @@ public class MainActivity extends Activity {
     // Sobrevivem à recriação da Activity (mesmo processo) enquanto o OCR roda em background.
     private static WeakReference<MainActivity> currentInstance = new WeakReference<>(null);
     private static String pendingCameraResultJson;
+    private static String pendingPhotoAnswerJson;
     // Foto capturada aguardando o aluno confirmar o OCR (arquivo original fica no cache até lá).
     private static volatile String pendingPhotoPath;
     private static volatile String pendingCameraPreviewJson;
@@ -117,6 +123,7 @@ public class MainActivity extends Activity {
                 super.onPageFinished(view, url);
                 webPageReady = true;
                 deliverPendingCameraResult();
+                deliverPendingPhotoAnswer();
                 deliverPendingCameraPreview();
             }
         });
@@ -195,6 +202,22 @@ public class MainActivity extends Activity {
                     }
 
                     startPendingPhotoOcr();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void solvePhotoQuestion() {
+            Log.d(SOLVE_TAG, "JS bridge solvePhotoQuestion");
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (!isTrustedDilsAIPage()) {
+                        sendCameraStatusToWeb("Câmera bloqueada fora da página oficial do DilsAI.", "error");
+                        return;
+                    }
+
+                    startPendingPhotoSolve();
                 }
             });
         }
@@ -425,6 +448,171 @@ public class MainActivity extends Activity {
         }
 
         uploadCapturedImageToBackend(file);
+    }
+
+    private void startPendingPhotoSolve() {
+        // Mesmo bloqueio do OCR: um envio por vez para a mesma foto.
+        if (ocrUploadInProgress) {
+            sendCameraStatusToWeb("Já estou analisando esta foto. Aguarde...", "info");
+            return;
+        }
+
+        String photoPath = pendingPhotoPath;
+        File file = photoPath == null ? null : new File(photoPath);
+
+        if (!isUsableCapture(file)) {
+            discardPendingPhoto();
+            sendCameraStatusToWeb("Não encontrei a foto. Toque em Tirar outra foto.", "error");
+            return;
+        }
+
+        uploadPhotoForSolve(file);
+    }
+
+    private void uploadPhotoForSolve(final File file) {
+        ocrUploadInProgress = true;
+        sendCameraStatusToWeb("Analisando a foto...", "info");
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                HttpURLConnection connection = null;
+                int statusCode = -1;
+                String errorDetail = "";
+
+                try {
+                    byte[] bytes = prepareImageForSolve(file);
+                    Log.d(SOLVE_TAG, "Solve upload start bytes=" + bytes.length
+                            + " original=" + file.length());
+
+                    connection = (HttpURLConnection) new URL(MATERIAL_SOLVE_IMAGE_URL).openConnection();
+                    connection.setRequestMethod("POST");
+                    connection.setConnectTimeout(30000);
+                    // Render pode estar acordando + chamada de visão: dá folga maior que o OCR.
+                    connection.setReadTimeout(150000);
+                    connection.setDoOutput(true);
+                    connection.setFixedLengthStreamingMode(bytes.length);
+                    connection.setRequestProperty("Content-Type", "image/jpeg");
+                    connection.setRequestProperty("X-File-Name", URLEncoder.encode(file.getName(), StandardCharsets.UTF_8.name()));
+
+                    try (OutputStream output = connection.getOutputStream()) {
+                        output.write(bytes);
+                    }
+
+                    statusCode = connection.getResponseCode();
+                    Log.d(SOLVE_TAG, "Solve backend status=" + statusCode);
+                    InputStream responseStream = statusCode >= 200 && statusCode < 300
+                            ? connection.getInputStream()
+                            : connection.getErrorStream();
+                    String responseBody = readStream(responseStream);
+
+                    if (statusCode < 200 || statusCode >= 300) {
+                        errorDetail = extractErrorDetail(responseBody);
+                        throw new IOException("HTTP " + statusCode);
+                    }
+
+                    JSONObject response = new JSONObject(responseBody);
+                    String answer = response.optString("answer", response.optString("response", ""));
+                    if (answer.trim().isEmpty()) {
+                        throw new IOException("Empty answer");
+                    }
+
+                    JSONObject payload = new JSONObject();
+                    payload.put("ok", true);
+                    payload.put("answer", answer);
+                    payload.put("notice", response.optString("notice", ""));
+                    payload.put("warning", response.optString("warning", ""));
+                    payload.put("file_name", file.getName());
+                    payload.put("file_size", bytes.length);
+
+                    // Resposta recebida: a foto original já pode sair do cache.
+                    final String photoPath = file.getAbsolutePath();
+                    runOnMainThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (photoPath.equals(pendingPhotoPath)) {
+                                discardPendingPhoto();
+                            }
+                        }
+                    });
+
+                    sendPhotoAnswerToWeb(payload);
+                } catch (Exception | OutOfMemoryError error) {
+                    // A foto continua pendente: o aluno pode tentar de novo ou usar "Ler texto desta foto".
+                    Log.e(SOLVE_TAG, "Solve upload failed status=" + statusCode, error);
+                    String message;
+                    if (!errorDetail.isEmpty()) {
+                        message = errorDetail;
+                    } else if (error instanceof Exception && isTemporaryOcrFailure((Exception) error, statusCode)) {
+                        message = "Não consegui analisar a foto agora. Tente novamente ou use Ler texto desta foto.";
+                    } else {
+                        message = "Não consegui processar a foto. Tente novamente ou tire outra foto.";
+                    }
+                    sendCameraStatusToWeb(message, "error");
+                } finally {
+                    ocrUploadInProgress = false;
+                    if (connection != null) {
+                        connection.disconnect();
+                    }
+                }
+            }
+        }).start();
+    }
+
+    private String extractErrorDetail(String responseBody) {
+        try {
+            Object detail = new JSONObject(responseBody).opt("detail");
+            return detail instanceof String ? ((String) detail).trim() : "";
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    // Versão mais legível que a do OCR (800 px): letras pequenas e fórmulas precisam de detalhe para a IA.
+    private byte[] prepareImageForSolve(File file) throws IOException {
+        try {
+            return encodeScaledJpeg(file, SOLVE_MAX_IMAGE_SIDE, SOLVE_JPEG_QUALITY).bytes;
+        } catch (OutOfMemoryError error) {
+            Log.e(SOLVE_TAG, "Solve image at 1600px failed, falling back to preview size", error);
+            return encodeScaledJpeg(file, PREVIEW_MAX_IMAGE_SIDE, PREVIEW_JPEG_QUALITY).bytes;
+        }
+    }
+
+    private void sendPhotoAnswerToWeb(final JSONObject payload) {
+        // Mesmo esquema do OCR: guarda até a página confirmar o recebimento.
+        pendingPhotoAnswerJson = payload.toString();
+
+        MainActivity target = currentInstance.get();
+        final MainActivity activity = target == null ? this : target;
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                activity.deliverPendingPhotoAnswer();
+            }
+        });
+    }
+
+    private void deliverPendingPhotoAnswer() {
+        final String json = pendingPhotoAnswerJson;
+        if (json == null || webView == null || !webPageReady) return;
+
+        String script = "(function(){"
+                + "if (typeof window.dilsaiSetAndroidPhotoAnswer !== 'function') return false;"
+                + "window.dilsaiSetAndroidPhotoAnswer(" + json + ");"
+                + "return true;"
+                + "})();";
+
+        webView.evaluateJavascript(script, new ValueCallback<String>() {
+            @Override
+            public void onReceiveValue(String value) {
+                boolean delivered = "true".equals(value);
+                Log.d(SOLVE_TAG, "Photo answer delivered=" + delivered);
+
+                if (delivered && json.equals(pendingPhotoAnswerJson)) {
+                    pendingPhotoAnswerJson = null;
+                }
+            }
+        });
     }
 
     private void discardPendingPhoto() {
