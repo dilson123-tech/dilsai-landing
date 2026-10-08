@@ -12,6 +12,7 @@ import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -31,6 +32,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.lang.ref.WeakReference;
 import java.net.URLEncoder;
@@ -46,11 +48,19 @@ public class MainActivity extends Activity {
     private static final String TAG = "DilsAICamera";
     private static final int OCR_MAX_IMAGE_SIDE = 800;
     private static final int OCR_JPEG_QUALITY = 85;
+    private static final int PREVIEW_MAX_IMAGE_SIDE = 1280;
+    private static final int PREVIEW_JPEG_QUALITY = 80;
     private static final String STATE_CAMERA_CAPTURE_PATH = "dilsai_camera_capture_path";
+    private static final String STATE_PENDING_PHOTO_PATH = "dilsai_pending_photo_path";
+    private static final String OCR_RETRY_MESSAGE = "Não consegui ler esta foto agora. Tente tirar outra foto mais perto ou tente novamente.";
 
     // Sobrevivem à recriação da Activity (mesmo processo) enquanto o OCR roda em background.
     private static WeakReference<MainActivity> currentInstance = new WeakReference<>(null);
     private static String pendingCameraResultJson;
+    // Foto capturada aguardando o aluno confirmar o OCR (arquivo original fica no cache até lá).
+    private static volatile String pendingPhotoPath;
+    private static volatile String pendingCameraPreviewJson;
+    private static volatile boolean ocrUploadInProgress;
 
     private WebView webView;
     private boolean webPageReady;
@@ -68,6 +78,20 @@ public class MainActivity extends Activity {
         if (savedInstanceState != null) {
             cameraCapturePath = savedInstanceState.getString(STATE_CAMERA_CAPTURE_PATH);
             cameraCaptureFile = cameraCapturePath == null ? null : new File(cameraCapturePath);
+
+            if (pendingPhotoPath == null) {
+                pendingPhotoPath = savedInstanceState.getString(STATE_PENDING_PHOTO_PATH);
+            }
+        }
+
+        // Processo recriado com foto pendente: refaz a prévia a partir do arquivo em cache.
+        if (pendingPhotoPath != null && pendingCameraPreviewJson == null) {
+            File pendingFile = new File(pendingPhotoPath);
+            if (isUsableCapture(pendingFile)) {
+                buildCameraPreview(pendingFile);
+            } else {
+                pendingPhotoPath = null;
+            }
         }
 
         webView = new WebView(this);
@@ -93,6 +117,7 @@ public class MainActivity extends Activity {
                 super.onPageFinished(view, url);
                 webPageReady = true;
                 deliverPendingCameraResult();
+                deliverPendingCameraPreview();
             }
         });
         webView.setWebChromeClient(new WebChromeClient() {
@@ -157,6 +182,36 @@ public class MainActivity extends Activity {
                 }
             });
         }
+
+        @JavascriptInterface
+        public void confirmPhotoOcr() {
+            Log.d(TAG, "JS bridge confirmPhotoOcr");
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (!isTrustedDilsAIPage()) {
+                        sendCameraStatusToWeb("Câmera bloqueada fora da página oficial do DilsAI.", "error");
+                        return;
+                    }
+
+                    startPendingPhotoOcr();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void cancelPhoto() {
+            Log.d(TAG, "JS bridge cancelPhoto");
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (!isTrustedDilsAIPage()) return;
+                    if (ocrUploadInProgress) return;
+
+                    discardPendingPhoto();
+                }
+            });
+        }
     }
 
     private boolean isTrustedDilsAIPage() {
@@ -165,6 +220,12 @@ public class MainActivity extends Activity {
     }
 
     private void launchNativeCameraForOcr() {
+        if (ocrUploadInProgress) {
+            sendCameraStatusToWeb("Aguarde: ainda estou lendo a foto anterior.", "info");
+            return;
+        }
+
+        discardPendingPhoto();
         clearCameraCapture();
 
         Intent intent = createCameraCaptureIntent();
@@ -265,13 +326,126 @@ public class MainActivity extends Activity {
         return File.createTempFile("dilsai_capture_" + timestamp + "_", ".jpg", storageDir);
     }
 
+    // Foto revisada pelo aluno: só agora vai para o OCR. Fica pendente até o OCR devolver texto.
+    private void showCapturedPhotoForReview(File file) {
+        discardPendingPhoto();
+        pendingPhotoPath = file.getAbsolutePath();
+        sendCameraStatusToWeb("Preparando prévia da foto...", "info");
+        buildCameraPreview(file);
+    }
+
+    private void buildCameraPreview(final File file) {
+        final String photoPath = file.getAbsolutePath();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                JSONObject payload = new JSONObject();
+
+                try {
+                    payload.put("file_name", file.getName());
+                    payload.put("original_size", file.length());
+
+                    try {
+                        EncodedImage preview = encodeScaledJpeg(file, PREVIEW_MAX_IMAGE_SIDE, PREVIEW_JPEG_QUALITY);
+                        payload.put("data_url", "data:image/jpeg;base64," + Base64.encodeToString(preview.bytes, Base64.NO_WRAP));
+                        payload.put("width", preview.width);
+                        payload.put("height", preview.height);
+                        payload.put("original_width", preview.originalWidth);
+                        payload.put("original_height", preview.originalHeight);
+                        Log.d(TAG, "Camera preview ready bytes=" + preview.bytes.length
+                                + " size=" + preview.width + "x" + preview.height);
+                    } catch (Exception | OutOfMemoryError error) {
+                        // Sem imagem a página ainda mostra os botões para ler ou tirar outra foto.
+                        Log.e(TAG, "Camera preview failed", error);
+                        payload.put("data_url", "");
+                    }
+                } catch (Exception error) {
+                    Log.e(TAG, "Camera preview payload failed", error);
+                    return;
+                }
+
+                final String json = payload.toString();
+                MainActivity target = currentInstance.get();
+                final MainActivity activity = target == null ? MainActivity.this : target;
+
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // O aluno pode ter cancelado ou tirado outra foto enquanto a prévia era gerada.
+                        if (!photoPath.equals(pendingPhotoPath)) return;
+
+                        pendingCameraPreviewJson = json;
+                        activity.deliverPendingCameraPreview();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void deliverPendingCameraPreview() {
+        final String json = pendingCameraPreviewJson;
+        if (json == null || webView == null || !webPageReady) return;
+
+        String script = "(function(){"
+                + "if (typeof window.dilsaiShowAndroidCameraPreview === 'function') {"
+                + "window.dilsaiShowAndroidCameraPreview(" + json + ");"
+                + "return 'preview';"
+                + "}"
+                + "if (typeof window.dilsaiSetMaterialFromAndroidCamera === 'function') return 'legacy';"
+                + "return 'none';"
+                + "})();";
+
+        webView.evaluateJavascript(script, new ValueCallback<String>() {
+            @Override
+            public void onReceiveValue(String value) {
+                Log.d(TAG, "Camera preview delivery=" + value);
+
+                // Página antiga (sem tela de prévia): mantém o fluxo anterior e lê a foto direto.
+                if ("\"legacy\"".equals(value) && json.equals(pendingCameraPreviewJson)) {
+                    startPendingPhotoOcr();
+                }
+            }
+        });
+    }
+
+    private void startPendingPhotoOcr() {
+        if (ocrUploadInProgress) {
+            sendCameraStatusToWeb("Já estou lendo esta foto. Aguarde...", "info");
+            return;
+        }
+
+        String photoPath = pendingPhotoPath;
+        File file = photoPath == null ? null : new File(photoPath);
+
+        if (!isUsableCapture(file)) {
+            discardPendingPhoto();
+            sendCameraStatusToWeb("Não encontrei a foto. Toque em Tirar outra foto.", "error");
+            return;
+        }
+
+        uploadCapturedImageToBackend(file);
+    }
+
+    private void discardPendingPhoto() {
+        String photoPath = pendingPhotoPath;
+        pendingPhotoPath = null;
+        pendingCameraPreviewJson = null;
+
+        if (photoPath != null && !new File(photoPath).delete()) {
+            Log.d(TAG, "Pending photo already removed path=" + photoPath);
+        }
+    }
+
     private void uploadCapturedImageToBackend(final File file) {
-        sendCameraStatusToWeb("Executando OCR na foto...", "info");
+        ocrUploadInProgress = true;
+        sendCameraStatusToWeb("Lendo texto da foto...", "info");
 
         new Thread(new Runnable() {
             @Override
             public void run() {
                 HttpURLConnection connection = null;
+                int statusCode = -1;
 
                 try {
                     Log.d(TAG, "OCR upload start path=" + file.getAbsolutePath()
@@ -298,7 +472,7 @@ public class MainActivity extends Activity {
                     }
                     Log.d(TAG, "OCR after write bytes=" + bytes.length);
 
-                    int statusCode = connection.getResponseCode();
+                    statusCode = connection.getResponseCode();
                     Log.d(TAG, "OCR backend status=" + statusCode);
                     InputStream responseStream = statusCode >= 200 && statusCode < 300
                             ? connection.getInputStream()
@@ -320,11 +494,30 @@ public class MainActivity extends Activity {
                     payload.put("char_count", response.optInt("char_count", text.length()));
                     payload.put("warning", response.optString("warning", ""));
 
+                    if (!text.trim().isEmpty()) {
+                        // OCR confirmado com texto: a foto original já pode sair do cache.
+                        final String photoPath = file.getAbsolutePath();
+                        runOnMainThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (photoPath.equals(pendingPhotoPath)) {
+                                    discardPendingPhoto();
+                                }
+                            }
+                        });
+                    }
+
                     sendCameraResultToWeb(payload);
                 } catch (Exception error) {
-                    Log.e(TAG, "OCR upload failed", error);
-                    sendCameraStatusToWeb("Não consegui processar a foto. Tente novamente ou use Enviar material.", "error");
+                    Log.e(TAG, "OCR upload failed status=" + statusCode, error);
+                    sendCameraStatusToWeb(
+                            isTemporaryOcrFailure(error, statusCode)
+                                    ? OCR_RETRY_MESSAGE
+                                    : "Não consegui processar a foto. Tente novamente ou use Enviar material.",
+                            "error"
+                    );
                 } finally {
+                    ocrUploadInProgress = false;
                     if (connection != null) {
                         connection.disconnect();
                     }
@@ -333,9 +526,38 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    // 5xx do Render (502/503/504), timeout ou queda de rede: vale tentar de novo ou tirar foto mais perto.
+    private boolean isTemporaryOcrFailure(Exception error, int statusCode) {
+        if (statusCode >= 500) return true;
+        if (error instanceof SocketTimeoutException) return true;
+        return statusCode == -1 && error instanceof IOException;
+    }
+
+    private void runOnMainThread(Runnable action) {
+        MainActivity target = currentInstance.get();
+        (target == null ? this : target).runOnUiThread(action);
+    }
+
+    private static class EncodedImage {
+        byte[] bytes;
+        int width;
+        int height;
+        int originalWidth;
+        int originalHeight;
+    }
+
     // Reduz a foto da câmera (maior lado <= 800 px, JPEG 85) para o upload de OCR não estourar o timeout.
     // O backend também limita a imagem a 800 px (IMAGE_OCR_MAX_SIDE), então enviar maior só aumentaria o upload.
     private byte[] prepareImageForOcr(File file) throws IOException {
+        try {
+            return encodeScaledJpeg(file, OCR_MAX_IMAGE_SIDE, OCR_JPEG_QUALITY).bytes;
+        } catch (Exception | OutOfMemoryError error) {
+            Log.e(TAG, "OCR image preparation failed, sending original file", error);
+            return readAllBytes(file);
+        }
+    }
+
+    private EncodedImage encodeScaledJpeg(File file, int maxSide, int quality) throws IOException {
         Bitmap bitmap = null;
 
         try {
@@ -348,7 +570,7 @@ public class MainActivity extends Activity {
             }
 
             int sampleSize = 1;
-            while (Math.max(bounds.outWidth, bounds.outHeight) / (sampleSize * 2) >= OCR_MAX_IMAGE_SIDE) {
+            while (Math.max(bounds.outWidth, bounds.outHeight) / (sampleSize * 2) >= maxSide) {
                 sampleSize *= 2;
             }
 
@@ -363,28 +585,31 @@ public class MainActivity extends Activity {
             bitmap = replaceBitmap(bitmap, rotateBitmapFromExif(file, bitmap));
 
             int longestSide = Math.max(bitmap.getWidth(), bitmap.getHeight());
-            if (longestSide > OCR_MAX_IMAGE_SIDE) {
-                float scale = (float) OCR_MAX_IMAGE_SIDE / longestSide;
+            if (longestSide > maxSide) {
+                float scale = (float) maxSide / longestSide;
                 int width = Math.max(1, Math.round(bitmap.getWidth() * scale));
                 int height = Math.max(1, Math.round(bitmap.getHeight() * scale));
                 bitmap = replaceBitmap(bitmap, Bitmap.createScaledBitmap(bitmap, width, height, true));
             }
 
             ByteArrayOutputStream output = new ByteArrayOutputStream();
-            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, OCR_JPEG_QUALITY, output)) {
+            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)) {
                 throw new IOException("Could not compress image");
             }
 
-            Log.d(TAG, "OCR image original=" + bounds.outWidth + "x" + bounds.outHeight
+            Log.d(TAG, "Camera image original=" + bounds.outWidth + "x" + bounds.outHeight
                     + " (" + file.length() + " bytes)"
                     + " processed=" + bitmap.getWidth() + "x" + bitmap.getHeight()
                     + " (" + output.size() + " bytes)"
                     + " inSampleSize=" + sampleSize);
 
-            return output.toByteArray();
-        } catch (Exception | OutOfMemoryError error) {
-            Log.e(TAG, "OCR image preparation failed, sending original file", error);
-            return readAllBytes(file);
+            EncodedImage result = new EncodedImage();
+            result.bytes = output.toByteArray();
+            result.width = bitmap.getWidth();
+            result.height = bitmap.getHeight();
+            result.originalWidth = bounds.outWidth;
+            result.originalHeight = bounds.outHeight;
+            return result;
         } finally {
             if (bitmap != null) {
                 bitmap.recycle();
@@ -463,9 +688,13 @@ public class MainActivity extends Activity {
     }
 
     private void sendCameraStatusToWeb(final String message, final String type) {
-        runOnUiThread(new Runnable() {
+        MainActivity target = currentInstance.get();
+        final MainActivity activity = target == null ? this : target;
+
+        activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                WebView webView = activity.webView;
                 if (webView == null) return;
 
                 String script = "window.dilsaiSetAndroidCameraStatus && window.dilsaiSetAndroidCameraStatus("
@@ -538,7 +767,7 @@ public class MainActivity extends Activity {
             logCameraResult(requestCode, resultCode, capturedFile);
 
             if (resultCode == RESULT_OK && isUsableCapture(capturedFile)) {
-                uploadCapturedImageToBackend(capturedFile);
+                showCapturedPhotoForReview(capturedFile);
             } else if (resultCode == RESULT_OK) {
                 sendCameraStatusToWeb("A foto não foi salva pela câmera. Tente novamente.", "error");
             } else {
@@ -561,11 +790,11 @@ public class MainActivity extends Activity {
             }
 
             if (resultCode == RESULT_OK && isUsableCapture(capturedFile)) {
-                // Foto da câmera: OCR nativo; o input file do WebView recebe cancelamento.
+                // Foto da câmera: prévia + OCR nativo; o input file do WebView recebe cancelamento.
                 filePathCallback.onReceiveValue(null);
                 filePathCallback = null;
                 clearCameraCapture();
-                uploadCapturedImageToBackend(capturedFile);
+                showCapturedPhotoForReview(capturedFile);
                 return;
             }
 
@@ -599,6 +828,7 @@ public class MainActivity extends Activity {
     protected void onSaveInstanceState(Bundle outState) {
         webView.saveState(outState);
         outState.putString(STATE_CAMERA_CAPTURE_PATH, cameraCapturePath);
+        outState.putString(STATE_PENDING_PHOTO_PATH, pendingPhotoPath);
         super.onSaveInstanceState(outState);
     }
 

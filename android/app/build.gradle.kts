@@ -23,8 +23,8 @@ android {
         applicationId = "com.dilsai.estudos"
         minSdk = 24
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.3.8-play-sdk24"
+        versionCode = 7
+        versionName = "0.3.9-camera-photo-review"
     }
 
     signingConfigs {

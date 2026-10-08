@@ -23,7 +23,7 @@
   <meta name="twitter:image" content="https://dilson123-tech.github.io/dilsai-landing/DilsAI_Logo.png">
 
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=1757111455" />
+  <link rel="stylesheet" href="styles.css?v=1757200000" />
 </head>
 <body>
   <header class="nav">
@@ -297,6 +297,17 @@
           <label class="study-app__context-title" for="dilsai-full-context">Texto extraído do material</label>
           <small class="study-app__context-hint">Revise o texto antes de enviar. Se estiver confuso, fotografe mais perto ou envie outra imagem.</small>
           <div id="dilsai-full-material-status" class="study-app__upload-status study-app__context-status" role="status" aria-live="polite"></div>
+          <div id="dilsai-full-photo-review" class="study-app__photo-review" hidden>
+            <strong class="study-app__photo-review-title">Confira se a questão aparece inteira antes de ler</strong>
+            <small class="study-app__photo-review-hint">Fotografe somente a questão, bem iluminada.</small>
+            <img id="dilsai-full-photo-review-image" class="study-app__photo-review-image" alt="Prévia da foto capturada" hidden>
+            <div id="dilsai-full-photo-review-meta" class="study-app__photo-review-meta"></div>
+            <div class="study-app__photo-review-actions">
+              <button type="button" id="dilsai-full-photo-ocr" class="study-app__photo-review-button study-app__photo-review-button--primary">Ler texto desta foto</button>
+              <button type="button" id="dilsai-full-photo-retake" class="study-app__photo-review-button">Tirar outra foto</button>
+              <button type="button" id="dilsai-full-photo-cancel" class="study-app__photo-review-button study-app__photo-review-button--ghost">Cancelar foto</button>
+            </div>
+          </div>
           <textarea id="dilsai-full-context" rows="8" autocomplete="off" data-lpignore="true" data-form-type="other"></textarea>
           <details id="dilsai-full-material-preview" class="study-app__material-preview" hidden>
             <summary>Ver prévia do texto extraído</summary>
@@ -326,6 +337,6 @@
     </div>
   </footer>
 
-  <script src="script.js?v=1791325537"></script>
+  <script src="script.js?v=1791400000"></script>
 </body>
 </html>
