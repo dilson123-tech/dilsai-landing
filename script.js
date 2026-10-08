@@ -839,8 +839,82 @@ function appendCameraOcrToChatInput(ocrText) {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-window.dilsaiSetMaterialFromAndroidCamera = setFullMaterialFromAndroidCamera;
+// Prévia da foto do Android: o OCR só roda depois que o aluno toca em "Ler texto desta foto".
+function getPhotoReviewElements() {
+  return {
+    box: document.getElementById("dilsai-full-photo-review"),
+    image: document.getElementById("dilsai-full-photo-review-image"),
+    meta: document.getElementById("dilsai-full-photo-review-meta"),
+    buttons: document.querySelectorAll("#dilsai-full-photo-review button"),
+  };
+}
+
+function setPhotoReviewBusy(busy) {
+  const { box, buttons } = getPhotoReviewElements();
+  if (box) box.dataset.busy = busy ? "true" : "";
+  buttons.forEach((button) => { button.disabled = Boolean(busy); });
+}
+
+function showAndroidCameraPreview(data) {
+  const { box, image, meta } = getPhotoReviewElements();
+  if (!box) return;
+
+  const dataUrl = String(data?.data_url || "");
+  if (image) {
+    if (dataUrl.startsWith("data:image/")) {
+      image.src = dataUrl;
+      image.hidden = false;
+    } else {
+      image.removeAttribute("src");
+      image.hidden = true;
+    }
+  }
+
+  if (meta) {
+    const width = Number(data?.original_width || 0);
+    const height = Number(data?.original_height || 0);
+    const size = Number(data?.original_size || 0);
+    const parts = [];
+    if (width > 0 && height > 0) parts.push(`${width}×${height}`);
+    if (size > 0) parts.push(formatMaterialFileSize(size));
+    if (!dataUrl) parts.push("prévia indisponível, mas a foto foi salva");
+    meta.textContent = parts.join(" • ");
+  }
+
+  box.hidden = false;
+  setPhotoReviewBusy(false);
+  setFullMaterialStatus("Foto pronta. Confira a prévia e toque em Ler texto desta foto.", "info");
+  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function hideAndroidCameraPreview() {
+  const { box, image, meta } = getPhotoReviewElements();
+  if (box) box.hidden = true;
+  if (image) {
+    image.removeAttribute("src");
+    image.hidden = true;
+  }
+  if (meta) meta.textContent = "";
+  setPhotoReviewBusy(false);
+}
+
+function getAndroidCameraBridgeMethod(name) {
+  const bridge = window.DilsAIAndroidCamera;
+  return bridge && typeof bridge[name] === "function" ? bridge : null;
+}
+
+window.dilsaiSetMaterialFromAndroidCamera = function(data) {
+  // Texto vazio mantém a prévia para o aluno tentar de novo ou tirar outra foto.
+  if (String(data?.text || "").trim()) {
+    hideAndroidCameraPreview();
+  } else {
+    setPhotoReviewBusy(false);
+  }
+  setFullMaterialFromAndroidCamera(data);
+};
+window.dilsaiShowAndroidCameraPreview = showAndroidCameraPreview;
 window.dilsaiSetAndroidCameraStatus = function(message, type) {
+  if (type === "error") setPhotoReviewBusy(false);
   setFullMaterialStatus(message, type || "info");
 };
 
@@ -1294,6 +1368,39 @@ function bindFullStudyChatEvents() {
 
       const { cameraFile } = getFullStudyElements();
       if (cameraFile) cameraFile.click();
+      return;
+    }
+
+    if (event.target.closest("#dilsai-full-photo-ocr")) {
+      event.preventDefault();
+      const bridge = getAndroidCameraBridgeMethod("confirmPhotoOcr");
+      if (!bridge) {
+        setFullMaterialStatus("Atualize o app DilsAI para ler a foto.", "error");
+        return;
+      }
+      setPhotoReviewBusy(true);
+      setFullMaterialStatus("Lendo texto da foto...", "info");
+      bridge.confirmPhotoOcr();
+      return;
+    }
+
+    if (event.target.closest("#dilsai-full-photo-retake")) {
+      event.preventDefault();
+      const bridge = getAndroidCameraBridgeMethod("openCamera");
+      hideAndroidCameraPreview();
+      if (bridge) {
+        setFullMaterialStatus("Abrindo câmera...", "info");
+        bridge.openCamera();
+      }
+      return;
+    }
+
+    if (event.target.closest("#dilsai-full-photo-cancel")) {
+      event.preventDefault();
+      const bridge = getAndroidCameraBridgeMethod("cancelPhoto");
+      hideAndroidCameraPreview();
+      if (bridge) bridge.cancelPhoto();
+      setFullMaterialStatus("Foto descartada.", "info");
       return;
     }
 

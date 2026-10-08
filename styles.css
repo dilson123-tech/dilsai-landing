@@ -2337,3 +2337,91 @@ body {
     word-break: break-word;
   }
 }
+
+/* === DilsAI Estudos — Revisão da foto da câmera (Android) === */
+#dilsai-study-app .study-app__photo-review {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(96, 165, 250, .35);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, .58);
+  color: #dbeafe;
+  box-sizing: border-box;
+}
+
+#dilsai-study-app .study-app__photo-review[hidden],
+#dilsai-study-app .study-app__photo-review-image[hidden] {
+  display: none;
+}
+
+#dilsai-study-app .study-app__photo-review-title {
+  color: #ffffff;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+#dilsai-study-app .study-app__photo-review-hint,
+#dilsai-study-app .study-app__photo-review-meta {
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+#dilsai-study-app .study-app__photo-review-image {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: min(60vh, 520px);
+  margin: 0 auto;
+  border-radius: 12px;
+  object-fit: contain;
+  background: rgba(2, 6, 23, .6);
+}
+
+#dilsai-study-app .study-app__photo-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#dilsai-study-app .study-app__photo-review-button {
+  flex: 1 1 140px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid rgba(96, 165, 250, .45);
+  border-radius: 12px;
+  background: rgba(37, 99, 235, .18);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: normal;
+}
+
+#dilsai-study-app .study-app__photo-review-button--primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+}
+
+#dilsai-study-app .study-app__photo-review-button--ghost {
+  background: transparent;
+  color: #cbd5e1;
+}
+
+#dilsai-study-app .study-app__photo-review-button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+@media (max-width: 480px) {
+  #dilsai-study-app .study-app__photo-review-button {
+    flex-basis: 100%;
+  }
+}
