@@ -136,7 +136,9 @@ def test_solve_image_returns_confidence_fields(client, fake_llm, answer, confide
     assert body["can_answer"] is can_answer
     assert body["needs_better_photo"] is needs_better_photo
     assert body["notice"] == main_module.IMAGE_CONFIDENCE_NOTICES[confidence]
-    assert body["answer"] == answer
+    # Com confiança baixa o texto da IA é trocado pela versão segura, sem resposta final.
+    expected = main_module._safe_low_confidence_answer(answer) if confidence == "baixa" else answer
+    assert body["answer"] == expected
 
 
 def test_solve_image_without_confidence_line_defaults_to_medium(client, fake_llm):
@@ -411,3 +413,45 @@ def test_solve_image_all_five_options_high_stays_high(client, fake_llm):
     assert body["confidence"] == "alta"
     assert body["can_answer"] is True
     assert body["needs_better_photo"] is False
+
+
+def test_solve_image_low_confidence_redacts_final_answer(client, fake_llm):
+    fake_llm.answer[0] = (
+        "O que consegui ler: Qual camada roteia pacotes? A) Camada Física B) Camada de Enlace de Dados.\n"
+        "Confiança: alta — tudo legível.\n"
+        "Resolução passo a passo: a Camada de Rede não está listada nas alternativas.\n"
+        "Resposta final: a alternativa correta é a mais próxima do contexto, B."
+    )
+    body = _solve(client)
+
+    assert body["confidence"] == "baixa"
+    assert body["can_answer"] is False
+    assert body["needs_better_photo"] is True
+    assert body["notice"] == main_module.IMAGE_CONFIDENCE_NOTICES["baixa"]
+    for text in (body["answer"], body["response"]):
+        assert "Confiança: alta" not in text
+        assert "Resposta final" not in text
+        assert "alternativa correta" not in text
+        assert "mais próxima" not in text
+        assert "Confiança: baixa" in text
+        assert "Não vou marcar resposta final" in text
+    assert "Qual camada roteia pacotes?" in body["answer"]
+
+
+def test_safe_low_confidence_answer_without_read_section():
+    safe = main_module._safe_low_confidence_answer("Confiança: alta.\nResposta final: B.")
+
+    assert safe.startswith("O que consegui ler: não consegui confirmar a questão completa com segurança.")
+    assert "Resposta final" not in safe
+    assert "Confiança: alta" not in safe
+
+
+def test_solve_image_high_confidence_keeps_final_answer(client, fake_llm):
+    fake_llm.answer[0] = (
+        "As alternativas são: A) Física B) Enlace C) Rede D) Transporte E) Aplicação.\n"
+        "Confiança: alta — tudo legível.\nResposta final: C) Rede."
+    )
+    body = _solve(client)
+
+    assert body["confidence"] == "alta"
+    assert "Resposta final: C) Rede." in body["answer"]
