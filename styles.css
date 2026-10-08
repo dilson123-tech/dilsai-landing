@@ -374,6 +374,36 @@ input:checked + .slider:before{transform:translateX(20px)}
   background: #f8fafc;
 }
 
+.study-app__quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px 0;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.study-app__quick-actions + .study-app__form {
+  border-top: 0;
+}
+
+.study-app__quick-action {
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.study-app__quick-action:hover {
+  background: #e0e7ff;
+  border-color: #818cf8;
+}
+
 .study-app__form textarea {
   min-height: 54px;
   max-height: 180px;
