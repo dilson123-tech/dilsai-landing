@@ -99,6 +99,23 @@ IMAGE_INCOMPLETE_SIGNALS = re.compile(
 # Alternativas lidas pela IA: "A)", "B)", ... Usado para detectar foto que mostrou só parte delas.
 IMAGE_ANSWER_OPTION_PATTERN = re.compile(r"(?<![A-Za-z])([A-E])\)")
 IMAGE_ANSWER_FINAL_SIGNALS = re.compile(r"\b(?:resposta final|alternativa correta|mais provavel)\b")
+# Com confiança baixa o texto da IA é substituído: só o trecho "O que consegui ler:" pode ser mantido.
+IMAGE_LOW_READ_SECTION_PATTERN = re.compile(
+    r"o que consegui ler\W{0,6}:?\**\s*(.*?)(?=\**\s*(?:confian[çc]a|resolu[çc][ãa]o passo a passo|resposta final)|\Z)",
+    re.IGNORECASE | re.DOTALL,
+)
+# Se o trecho lido já trouxer conclusão, descarta (comparado sem acento e em minúsculas).
+IMAGE_LOW_FORBIDDEN_SIGNALS = re.compile(
+    r"confianca|resposta final|alternativa correta|mais proxim[oa]|alternativa mais provavel"
+    r"|nenhuma (?:das )?alternativas?|nao (?:esta|aparece) (?:listad|nas alternativas|entre as alternativas)"
+)
+IMAGE_LOW_READ_FALLBACK = "não consegui confirmar a questão completa com segurança."
+IMAGE_LOW_CONFIDENCE_LINES = (
+    "Confiança: baixa — não consegui confirmar a questão e todas as alternativas com segurança.\n"
+    "Não vou marcar resposta final porque a foto parece incompleta ou as alternativas visíveis não são suficientes.\n"
+    "Tire outra foto mais perto, com boa luz, mostrando o enunciado inteiro e todas as alternativas, "
+    "ou digite o enunciado e as alternativas."
+)
 # Palavras que o modelo às vezes devolve grudadas. Só pares conhecidos, para não mexer em texto válido.
 IMAGE_ANSWER_GLUED_WORDS = {
     "pedepara": "pede para",
@@ -479,6 +496,17 @@ def _image_answer_read_few_options(answer: str, plain: str) -> bool:
     return 0 < len(options) <= 2 and bool(IMAGE_ANSWER_FINAL_SIGNALS.search(plain))
 
 
+def _safe_low_confidence_answer(answer: str) -> str:
+    # Confiança baixa não pode carregar "Confiança: alta", "Resposta final" nem alternativa escolhida.
+    match = IMAGE_LOW_READ_SECTION_PATTERN.search(answer or "")
+    read = match.group(1).strip(" \n*-—") if match else ""
+    plain = unicodedata.normalize("NFKD", read.lower())
+    plain = "".join(char for char in plain if not unicodedata.combining(char))
+    if not read or IMAGE_LOW_FORBIDDEN_SIGNALS.search(plain):
+        read = IMAGE_LOW_READ_FALLBACK
+    return f"O que consegui ler: {read}\n\n{IMAGE_LOW_CONFIDENCE_LINES}"
+
+
 def _fix_glued_words(answer: str) -> str:
     def replace(match: re.Match) -> str:
         word = match.group(0)
@@ -553,6 +581,8 @@ async def solve_image_question(request: Request) -> dict:
         # A IA esqueceu a linha de confiança: não tratar a resposta como garantida.
         confidence = "media"
         answer = f"{answer.rstrip()}\n\n{IMAGE_CONFIDENCE_MISSING_LINE}"
+    if confidence == "baixa":
+        answer = _safe_low_confidence_answer(answer)
 
     return {
         "ok": True,
