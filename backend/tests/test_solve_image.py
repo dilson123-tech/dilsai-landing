@@ -36,11 +36,15 @@ def client():
 
 @pytest.fixture
 def fake_llm(monkeypatch):
-    calls = []
+    class Calls(list):
+        # Resposta devolvida pela IA falsa; testes podem trocar fake_llm.answer[0].
+        answer = ["O que consegui ler: 2 + 2.\nConfiança: alta — tudo legível.\nPasso 1: leitura do enunciado."]
+
+    calls = Calls()
 
     def fake(image_jpeg, settings_, topic, level, ocr_hint):
         calls.append({"jpeg": image_jpeg, "topic": topic, "level": level, "ocr": ocr_hint})
-        return "Passo 1: leitura do enunciado."
+        return calls.answer[0]
 
     monkeypatch.setattr(main_module, "generate_image_study_answer", fake)
     monkeypatch.setattr(main_module, "_ocr_hint_for_vision", lambda image: "")
@@ -50,15 +54,96 @@ def fake_llm(monkeypatch):
 def test_image_prompt_has_required_instructions():
     prompt = build_image_question_prompt()
 
-    assert "Leia a questão na imagem." in prompt
-    assert "Se conseguir identificar o enunciado e alternativas, explique passo a passo." in prompt
-    assert "diga claramente para tirar outra foto mais perto" in prompt
+    assert "Leia a questão na imagem" in prompt
+    assert "Não invente texto que não está visível." in prompt
     assert "Com base no que consegui ler..." in prompt
     assert "A alternativa mais provável é..." in prompt
     assert "nunca responda que não encontrou material" in prompt
-    assert "Não invente texto que não está visível." in prompt
-    assert "Se for questão de múltipla escolha, indique a alternativa provável e explique." in prompt
     assert "Não incentive cola" in prompt
+
+
+def test_image_prompt_requires_confidence_level():
+    prompt = build_image_question_prompt()
+
+    assert "Classifique a confiança da leitura" in prompt
+    for level in ("Confiança: alta", "Confiança: média", "Confiança: baixa"):
+        assert level in prompt
+    assert "Na dúvida entre dois níveis, escolha o mais baixo." in prompt
+
+
+def test_image_prompt_forbids_final_answer_with_low_confidence():
+    prompt = build_image_question_prompt()
+
+    assert "Confiança baixa: NÃO marque alternativa e NÃO dê resposta final." in prompt
+    assert "Não consegui ler a questão com segurança." in prompt
+    assert "Confiança média" in prompt and "com ressalva forte" in prompt
+
+
+def test_image_prompt_requires_listing_what_was_read():
+    prompt = build_image_question_prompt()
+
+    assert "O que consegui ler:" in prompt
+    assert "se alguma alternativa ou dado estiver ilegível, diga isso aqui" in prompt
+
+
+def test_image_prompt_asks_new_photo_when_alternatives_or_data_unreadable():
+    prompt = build_image_question_prompt()
+
+    assert "alguma alternativa ilegível ou faltando, ou algum dado essencial ilegível" in prompt
+    assert "Se não conseguir ler todas as alternativas, a confiança é baixa" in prompt
+    assert "peça para tirar outra foto mais perto, com boa luz e a questão inteira no enquadramento" in prompt
+    assert "digitar o enunciado e as alternativas" in prompt
+
+
+@pytest.mark.parametrize(
+    "answer,expected",
+    [
+        ("O que consegui ler: ...\nConfiança: alta — tudo legível.", "alta"),
+        ("**Confiança:** média, a alternativa C está borrada.", "media"),
+        ("Confiança: **Baixa**\nNão consegui ler a questão com segurança.", "baixa"),
+        ("Confiança - media", "media"),
+        ("Sem a linha de confiança.", None),
+    ],
+)
+def test_image_answer_confidence_parser(answer, expected):
+    assert main_module._image_answer_confidence(answer) == expected
+
+
+@pytest.mark.parametrize(
+    "answer,confidence,can_answer,needs_better_photo",
+    [
+        ("Confiança: alta — legível.\nResposta final: B.", "alta", True, False),
+        ("Confiança: média — alternativa D duvidosa.\nA alternativa mais provável é B.", "media", True, False),
+        ("Confiança: baixa — alternativas cortadas.\nNão consegui ler a questão com segurança.", "baixa", False, True),
+    ],
+)
+def test_solve_image_returns_confidence_fields(client, fake_llm, answer, confidence, can_answer, needs_better_photo):
+    fake_llm.answer[0] = answer
+    response = client.post(
+        "/api/v1/materials/solve-image", content=_image_bytes(), headers={"Content-Type": "image/jpeg"}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["confidence"] == confidence
+    assert body["can_answer"] is can_answer
+    assert body["needs_better_photo"] is needs_better_photo
+    assert body["notice"] == main_module.IMAGE_CONFIDENCE_NOTICES[confidence]
+    assert body["answer"] == answer
+
+
+def test_solve_image_without_confidence_line_defaults_to_medium(client, fake_llm):
+    fake_llm.answer[0] = "Resposta final: B."
+    response = client.post(
+        "/api/v1/materials/solve-image", content=_image_bytes(), headers={"Content-Type": "image/jpeg"}
+    )
+
+    body = response.json()
+    assert body["confidence"] == "media"
+    assert body["can_answer"] is True
+    assert body["needs_better_photo"] is False
+    assert body["answer"].endswith(main_module.IMAGE_CONFIDENCE_MISSING_LINE)
+    assert "Confiança: média" in body["answer"]
 
 
 def test_solve_image_rejects_empty_body(client, fake_llm):
@@ -109,7 +194,8 @@ def test_solve_image_success_returns_answer(client, fake_llm, fmt, content_type)
     body = response.json()
     assert body["ok"] is True
     assert body["status"] == "success"
-    assert body["response"] == "Passo 1: leitura do enunciado."
+    assert body["response"].endswith("Passo 1: leitura do enunciado.")
+    assert body["confidence"] == "alta"
     assert body["answer"] == body["response"]
     assert body["notice"]
     # OCR de apoio vazio não vira aviso de erro quando a visão respondeu.

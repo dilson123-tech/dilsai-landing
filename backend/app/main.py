@@ -1,3 +1,4 @@
+import re
 from io import BytesIO
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -74,6 +75,16 @@ IMAGE_VISION_FALLBACK_SIDE = 1024
 # OCR de apoio não pode segurar a resposta: a IA de visão lê a foto mesmo sem ele.
 IMAGE_VISION_OCR_TIMEOUT_SECONDS = 6
 IMAGE_VISION_MAX_ENCODED_BYTES = 1_500_000
+# Aceita "Confiança: alta", "**Confiança:** média", "Confiança - baixa" etc.; vale a primeira ocorrência.
+IMAGE_CONFIDENCE_PATTERN = re.compile(r"confian[çc]a\W{0,6}(alta|m[ée]dia|baixa)", re.IGNORECASE)
+IMAGE_CONFIDENCE_NOTICES = {
+    "alta": "Resposta gerada pela foto. Confira se corresponde à sua questão.",
+    "media": "Resposta provável gerada pela foto. Confira antes de usar.",
+    "baixa": "Não consegui ler a foto com segurança. Tire outra foto mais perto.",
+}
+IMAGE_CONFIDENCE_MISSING_LINE = (
+    "Confiança: média — confira o enunciado e as alternativas na foto antes de usar esta resposta."
+)
 IMAGE_UPLOAD_MAX_BYTES = 5_000_000
 IMAGE_MAX_PIXELS = 40_000_000
 IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
@@ -417,6 +428,14 @@ def _ocr_hint_for_vision(image) -> str:
         return ""
 
 
+def _image_answer_confidence(answer: str) -> str | None:
+    match = IMAGE_CONFIDENCE_PATTERN.search(answer or "")
+    if not match:
+        return None
+    value = match.group(1).lower()
+    return "media" if value in {"média", "media"} else value
+
+
 def _enum_header(request: Request, name: str, enum_cls, default):
     value = (request.headers.get(name) or "").strip()
     try:
@@ -472,13 +491,23 @@ async def solve_image_question(request: Request) -> dict:
         )
         raise HTTPException(status_code=503, detail=detail) from exc
 
+    confidence = _image_answer_confidence(answer)
+    if confidence is None:
+        # A IA esqueceu a linha de confiança: não tratar a resposta como garantida.
+        confidence = "media"
+        answer = f"{answer.rstrip()}\n\n{IMAGE_CONFIDENCE_MISSING_LINE}"
+
     return {
         "ok": True,
         "status": "success",
         "source_type": "image_vision",
         "response": answer,
         "answer": answer,
-        "notice": "Resposta gerada pela foto. Confira se corresponde à sua questão.",
+        "notice": IMAGE_CONFIDENCE_NOTICES[confidence],
+        # "alta" | "media" | "baixa". Com baixa a IA não marca alternativa e pede nova foto.
+        "confidence": confidence,
+        "can_answer": confidence != "baixa",
+        "needs_better_photo": confidence == "baixa",
         # OCR fraco não é erro aqui: a IA de visão leu a foto diretamente.
         "warning": None,
         "ocr_weak": len(ocr_hint) < 20,
