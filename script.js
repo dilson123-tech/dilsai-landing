@@ -952,11 +952,8 @@ window.dilsaiSetAndroidPhotoAnswer = function(data) {
   addFullStudyMessage("user", "📷 Questão enviada por foto", "Resolver pela foto");
   addFullStudyMessage("assistant", answer, "Professor DilsAI • Resolvido pela foto");
 
-  const warning = String(data?.warning || "").trim();
-  setFullMaterialStatus(
-    warning || String(data?.notice || "Foto analisada. Confira a explicação no chat."),
-    warning ? "error" : "success"
-  );
+  // Se a IA respondeu pela foto, OCR fraco não é erro: o status fica como sucesso.
+  setFullMaterialStatus("Resposta gerada pela foto. Confira se corresponde à sua questão.", "success");
 };
 window.dilsaiSetAndroidCameraStatus = function(message, type) {
   if (type === "error") {

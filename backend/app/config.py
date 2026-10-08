@@ -23,7 +23,10 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 900
     # Modelo com visão para "Resolver pela foto". Vazio = usa llm_model.
     llm_vision_model: str = ""
-    llm_vision_max_tokens: int = 1200
+    # Saída é o que mais pesa no tempo de resposta; 900 cobre a explicação passo a passo.
+    llm_vision_max_tokens: int = 900
+    # "high" mantém letras pequenas legíveis; "auto" pode cair para baixa resolução (512 px).
+    llm_vision_detail: str = "high"
     openai_api_key: str = Field(default="", repr=False)
 
     rate_limit_enabled: bool = True
@@ -40,6 +43,11 @@ class Settings(BaseSettings):
     @property
     def vision_model(self) -> str:
         return self.llm_vision_model.strip() or self.llm_model
+
+    @property
+    def vision_detail(self) -> str:
+        detail = self.llm_vision_detail.strip().lower()
+        return detail if detail in {"low", "high", "auto"} else "high"
 
     @property
     def cors_origins_list(self) -> list[str]:

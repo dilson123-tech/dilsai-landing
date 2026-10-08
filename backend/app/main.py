@@ -67,8 +67,12 @@ SCANNED_PDF_OCR_MAX_PAGES = 3
 
 IMAGE_OCR_MAX_SIDE = 800
 # Imagem para a IA de visão: mais legível que a do OCR, mas com payload controlado.
-IMAGE_VISION_MAX_SIDE = 1600
-IMAGE_VISION_FALLBACK_SIDE = 1280
+# Com detail "high" a OpenAI reduz a imagem para lado menor 768 px, então 1280 px já entrega
+# a mesma resolução final que 1600 px, com upload e compressão mais rápidos.
+IMAGE_VISION_MAX_SIDE = 1280
+IMAGE_VISION_FALLBACK_SIDE = 1024
+# OCR de apoio não pode segurar a resposta: a IA de visão lê a foto mesmo sem ele.
+IMAGE_VISION_OCR_TIMEOUT_SECONDS = 6
 IMAGE_VISION_MAX_ENCODED_BYTES = 1_500_000
 IMAGE_UPLOAD_MAX_BYTES = 5_000_000
 IMAGE_MAX_PIXELS = 40_000_000
@@ -379,7 +383,7 @@ def _prepare_image_for_vision(data: bytes) -> dict:
 
         encoded = b""
         for max_side, quality in (
-            (IMAGE_VISION_MAX_SIDE, 85),
+            (IMAGE_VISION_MAX_SIDE, 82),
             (IMAGE_VISION_MAX_SIDE, 72),
             (IMAGE_VISION_FALLBACK_SIDE, 70),
         ):
@@ -408,7 +412,7 @@ def _ocr_hint_for_vision(image) -> str:
 
         ocr_image = image.copy()
         ocr_image.thumbnail((IMAGE_OCR_MAX_SIDE, IMAGE_OCR_MAX_SIDE))
-        return (pytesseract.image_to_string(ocr_image, lang="por+eng", timeout=15) or "").strip()
+        return (pytesseract.image_to_string(ocr_image, lang="por+eng", timeout=IMAGE_VISION_OCR_TIMEOUT_SECONDS) or "").strip()
     except Exception:
         return ""
 
@@ -468,24 +472,16 @@ async def solve_image_question(request: Request) -> dict:
         )
         raise HTTPException(status_code=503, detail=detail) from exc
 
-    warning = None
-    if len(ocr_hint) < 20:
-        warning = (
-            "O texto da foto ficou difícil de ler automaticamente. "
-            "Confira se a resposta corresponde à sua questão; se não, tire outra foto mais perto e com boa luz."
-        )
-
     return {
         "ok": True,
         "status": "success",
         "source_type": "image_vision",
         "response": answer,
         "answer": answer,
-        "notice": (
-            "Resposta gerada pela IA a partir da foto, para estudo. "
-            "Confira o enunciado e use a explicação para aprender o raciocínio."
-        ),
-        "warning": warning,
+        "notice": "Resposta gerada pela foto. Confira se corresponde à sua questão.",
+        # OCR fraco não é erro aqui: a IA de visão leu a foto diretamente.
+        "warning": None,
+        "ocr_weak": len(ocr_hint) < 20,
         "model": settings.vision_model,
         "topic": topic.value,
         "level": level.value,

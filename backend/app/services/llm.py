@@ -201,7 +201,8 @@ def generate_image_study_answer(
     try:
         from openai import OpenAI
 
-        client = OpenAI(api_key=settings.openai_api_key.strip(), timeout=60.0)
+        # Uma retentativa só: com o padrão (2) uma falha lenta podia passar de 2 minutos no celular.
+        client = OpenAI(api_key=settings.openai_api_key.strip(), timeout=60.0, max_retries=1)
         response = client.chat.completions.create(
             model=settings.vision_model,
             temperature=settings.llm_temperature,
@@ -223,7 +224,7 @@ def generate_image_study_answer(
                             "type": "image_url",
                             "image_url": {
                                 "url": f"data:image/jpeg;base64,{image_b64}",
-                                "detail": "high",
+                                "detail": settings.vision_detail,
                             },
                         },
                     ],

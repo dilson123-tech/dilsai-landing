@@ -52,7 +52,10 @@ def test_image_prompt_has_required_instructions():
 
     assert "Leia a questão na imagem." in prompt
     assert "Se conseguir identificar o enunciado e alternativas, explique passo a passo." in prompt
-    assert "Se a imagem estiver ilegível, diga claramente para tirar outra foto mais perto." in prompt
+    assert "diga claramente para tirar outra foto mais perto" in prompt
+    assert "Com base no que consegui ler..." in prompt
+    assert "A alternativa mais provável é..." in prompt
+    assert "nunca responda que não encontrou material" in prompt
     assert "Não invente texto que não está visível." in prompt
     assert "Se for questão de múltipla escolha, indique a alternativa provável e explique." in prompt
     assert "Não incentive cola" in prompt
@@ -109,7 +112,9 @@ def test_solve_image_success_returns_answer(client, fake_llm, fmt, content_type)
     assert body["response"] == "Passo 1: leitura do enunciado."
     assert body["answer"] == body["response"]
     assert body["notice"]
-    assert body["warning"]  # OCR de apoio vazio gera aviso
+    # OCR de apoio vazio não vira aviso de erro quando a visão respondeu.
+    assert body["warning"] is None
+    assert body["ocr_weak"] is True
     assert body["topic"] == "matematica_logica"
     assert body["image_processed_size"] == [400, 300]
     assert fake_llm[0]["jpeg"].startswith(b"\xff\xd8")
@@ -193,6 +198,7 @@ def test_generate_image_answer_sends_vision_payload(monkeypatch):
     assert user_content[0]["type"] == "text"
     assert "2 + 2 = ?" in user_content[0]["text"]
     assert user_content[1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
+    assert user_content[1]["image_url"]["detail"] == "high"
 
 
 def test_solve_image_uses_materials_rate_limit_bucket():
