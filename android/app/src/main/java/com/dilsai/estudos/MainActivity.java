@@ -518,20 +518,28 @@ public class MainActivity extends Activity {
                         throw new IOException("Empty answer");
                     }
 
+                    String confidence = response.optString("confidence", "media");
+                    final boolean needsBetterPhoto = response.optBoolean("needs_better_photo", false);
+                    Log.d(SOLVE_TAG, "Solve confidence=" + confidence + " needsBetterPhoto=" + needsBetterPhoto);
+
                     JSONObject payload = new JSONObject();
                     payload.put("ok", true);
                     payload.put("answer", answer);
                     payload.put("notice", response.optString("notice", ""));
-                    payload.put("warning", response.optString("warning", ""));
+                    payload.put("warning", response.isNull("warning") ? "" : response.optString("warning", ""));
+                    payload.put("confidence", confidence);
+                    payload.put("can_answer", response.optBoolean("can_answer", true));
+                    payload.put("needs_better_photo", needsBetterPhoto);
                     payload.put("file_name", file.getName());
                     payload.put("file_size", bytes.length);
 
-                    // Resposta recebida: a foto original já pode sair do cache.
+                    // Resposta confiável: a foto original já pode sair do cache.
+                    // Leitura insegura: a foto continua pendente para o aluno tentar de novo.
                     final String photoPath = file.getAbsolutePath();
                     runOnMainThread(new Runnable() {
                         @Override
                         public void run() {
-                            if (photoPath.equals(pendingPhotoPath)) {
+                            if (!needsBetterPhoto && photoPath.equals(pendingPhotoPath)) {
                                 discardPendingPhoto();
                             }
                         }

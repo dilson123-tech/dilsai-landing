@@ -934,6 +934,32 @@ function removePhotoSolvePlaceholder() {
 }
 
 // Resposta do "Resolver pela foto" vinda do Android (sucesso ou erro).
+const PHOTO_CONFIDENCE_VIEW = {
+  alta: {
+    meta: "Professor DilsAI • Resolvido pela foto • Confiança alta",
+    status: "Resposta gerada pela foto. Confira se corresponde à sua questão.",
+    type: "success"
+  },
+  media: {
+    meta: "Professor DilsAI • Resposta provável pela foto • Confiança média",
+    status: "Resposta provável gerada pela foto. Confira antes de usar.",
+    type: "info"
+  },
+  baixa: {
+    meta: "Professor DilsAI • Leitura insegura da foto • Confiança baixa",
+    status: "Não consegui ler a foto com segurança. Tire outra foto mais perto.",
+    type: "error"
+  }
+};
+
+function getPhotoAnswerConfidence(data, answer) {
+  // Apps antigos não repassam o campo; nesse caso lê a linha "Confiança: ..." da resposta.
+  const raw = String(data?.confidence || "").toLowerCase()
+    || (String(answer).match(/confian[çc]a\W{0,6}(alta|m[ée]dia|baixa)/i)?.[1] || "").toLowerCase();
+  if (raw === "alta" || raw === "baixa") return raw;
+  return "media";
+}
+
 window.dilsaiSetAndroidPhotoAnswer = function(data) {
   removePhotoSolvePlaceholder();
   const answer = String(data?.answer || data?.response || "").trim();
@@ -948,12 +974,21 @@ window.dilsaiSetAndroidPhotoAnswer = function(data) {
     return;
   }
 
-  hideAndroidCameraPreview();
-  addFullStudyMessage("user", "📷 Questão enviada por foto", "Resolver pela foto");
-  addFullStudyMessage("assistant", answer, "Professor DilsAI • Resolvido pela foto");
+  const confidence = getPhotoAnswerConfidence(data, answer);
+  const view = PHOTO_CONFIDENCE_VIEW[confidence];
 
-  // Se a IA respondeu pela foto, OCR fraco não é erro: o status fica como sucesso.
-  setFullMaterialStatus("Resposta gerada pela foto. Confira se corresponde à sua questão.", "success");
+  if (confidence === "baixa" || data?.needs_better_photo === true) {
+    // Leitura insegura: mantém a prévia aberta para o aluno tirar outra foto mais perto.
+    setPhotoReviewBusy(false);
+  } else {
+    hideAndroidCameraPreview();
+  }
+  addFullStudyMessage("user", "📷 Questão enviada por foto", "Resolver pela foto");
+  const bubble = addFullStudyMessage("assistant", answer, view.meta);
+  if (bubble) bubble.dataset.confidence = confidence;
+
+  // OCR fraco não é erro: o status segue a confiança que a IA declarou na leitura.
+  setFullMaterialStatus(view.status, view.type);
 };
 window.dilsaiSetAndroidCameraStatus = function(message, type) {
   if (type === "error") {
