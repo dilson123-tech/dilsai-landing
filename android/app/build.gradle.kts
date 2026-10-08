@@ -23,8 +23,8 @@ android {
         applicationId = "com.dilsai.estudos"
         minSdk = 24
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.4.0-image-question-answer"
+        versionCode = 9
+        versionName = "0.4.1-image-solve-fast-tolerant"
     }
 
     signingConfigs {

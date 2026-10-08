@@ -52,9 +52,10 @@ public class MainActivity extends Activity {
     private static final int OCR_JPEG_QUALITY = 85;
     private static final int PREVIEW_MAX_IMAGE_SIDE = 1280;
     private static final int PREVIEW_JPEG_QUALITY = 80;
-    // "Resolver pela foto": a IA de visão precisa de mais detalhe que o OCR (backend aceita até 1600 px).
-    private static final int SOLVE_MAX_IMAGE_SIDE = 1600;
-    private static final int SOLVE_JPEG_QUALITY = 85;
+    // "Resolver pela foto": a IA de visão precisa de mais detalhe que o OCR. 1280 px já entrega a
+    // resolução final usada pela OpenAI (lado menor 768 px) com upload mais rápido que 1600 px.
+    private static final int SOLVE_MAX_IMAGE_SIDE = 1280;
+    private static final int SOLVE_JPEG_QUALITY = 82;
     private static final String STATE_CAMERA_CAPTURE_PATH = "dilsai_camera_capture_path";
     private static final String STATE_PENDING_PHOTO_PATH = "dilsai_pending_photo_path";
     private static final String OCR_RETRY_MESSAGE = "Não consegui ler esta foto agora. Tente tirar outra foto mais perto ou tente novamente.";
@@ -573,7 +574,7 @@ public class MainActivity extends Activity {
         try {
             return encodeScaledJpeg(file, SOLVE_MAX_IMAGE_SIDE, SOLVE_JPEG_QUALITY).bytes;
         } catch (OutOfMemoryError error) {
-            Log.e(SOLVE_TAG, "Solve image at 1600px failed, falling back to preview size", error);
+            Log.e(SOLVE_TAG, "Solve image at " + SOLVE_MAX_IMAGE_SIDE + "px failed, falling back to preview size", error);
             return encodeScaledJpeg(file, PREVIEW_MAX_IMAGE_SIDE, PREVIEW_JPEG_QUALITY).bytes;
         }
     }
