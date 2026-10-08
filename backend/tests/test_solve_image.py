@@ -380,3 +380,34 @@ def test_solve_image_returns_cleaned_answer(client, fake_llm):
 
     assert "pede para somar" in body["answer"]
     assert "evitar: Não trocar" in body["answer"]
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "O que consegui ler: A) Camada Física B) Camada de Enlace de Dados.\nConfiança: alta — legível.\n"
+        "A resposta correta seria a Camada de Rede, que não está listada nas alternativas.",
+        "Confiança: alta — legível.\nNenhuma das alternativas é correta, B é a mais próxima do contexto.",
+        "As alternativas são: A) Camada Física B) Camada de Enlace de Dados.\nConfiança: alta — legível.\n"
+        "Resposta final: B) Camada de Enlace de Dados.",
+    ],
+)
+def test_solve_image_missing_visible_options_forces_low(client, fake_llm, answer):
+    fake_llm.answer[0] = answer
+    body = _solve(client)
+
+    assert body["confidence"] == "baixa"
+    assert body["can_answer"] is False
+    assert body["needs_better_photo"] is True
+
+
+def test_solve_image_all_five_options_high_stays_high(client, fake_llm):
+    fake_llm.answer[0] = (
+        "As alternativas são: A) Física B) Enlace C) Rede D) Transporte E) Aplicação.\n"
+        "Confiança: alta — tudo legível.\nResposta final: C) Rede."
+    )
+    body = _solve(client)
+
+    assert body["confidence"] == "alta"
+    assert body["can_answer"] is True
+    assert body["needs_better_photo"] is False
