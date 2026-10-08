@@ -690,6 +690,7 @@ function addFullStudyMessage(role, text, meta) {
 
   messages.appendChild(bubble);
   messages.scrollTop = messages.scrollHeight;
+  return bubble;
 }
 
 function openFullStudyChat() {
@@ -881,9 +882,20 @@ function showAndroidCameraPreview(data) {
     meta.textContent = parts.join(" • ");
   }
 
+  // "Resolver pela foto" só aparece em apps que já têm a ponte nova (v0.4.0+).
+  const canSolve = Boolean(getAndroidCameraBridgeMethod("solvePhotoQuestion"));
+  const solveButton = document.getElementById("dilsai-full-photo-solve");
+  if (solveButton) solveButton.hidden = !canSolve;
+  box.dataset.solve = canSolve ? "true" : "";
+
   box.hidden = false;
   setPhotoReviewBusy(false);
-  setFullMaterialStatus("Foto pronta. Confira a prévia e toque em Ler texto desta foto.", "info");
+  setFullMaterialStatus(
+    canSolve
+      ? "Foto pronta. Toque em Resolver pela foto ou em Ler texto desta foto."
+      : "Foto pronta. Confira a prévia e toque em Ler texto desta foto.",
+    "info"
+  );
   box.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
@@ -913,8 +925,44 @@ window.dilsaiSetMaterialFromAndroidCamera = function(data) {
   setFullMaterialFromAndroidCamera(data);
 };
 window.dilsaiShowAndroidCameraPreview = showAndroidCameraPreview;
+
+let dilsaiPhotoSolvePlaceholder = null;
+
+function removePhotoSolvePlaceholder() {
+  if (dilsaiPhotoSolvePlaceholder) dilsaiPhotoSolvePlaceholder.remove();
+  dilsaiPhotoSolvePlaceholder = null;
+}
+
+// Resposta do "Resolver pela foto" vinda do Android (sucesso ou erro).
+window.dilsaiSetAndroidPhotoAnswer = function(data) {
+  removePhotoSolvePlaceholder();
+  const answer = String(data?.answer || data?.response || "").trim();
+
+  if (!data?.ok || !answer) {
+    // Mantém a prévia para o aluno tentar de novo, ler o texto ou tirar outra foto.
+    setPhotoReviewBusy(false);
+    setFullMaterialStatus(
+      String(data?.error || data?.detail || "Não consegui analisar a foto agora. Tente novamente."),
+      "error"
+    );
+    return;
+  }
+
+  hideAndroidCameraPreview();
+  addFullStudyMessage("user", "📷 Questão enviada por foto", "Resolver pela foto");
+  addFullStudyMessage("assistant", answer, "Professor DilsAI • Resolvido pela foto");
+
+  const warning = String(data?.warning || "").trim();
+  setFullMaterialStatus(
+    warning || String(data?.notice || "Foto analisada. Confira a explicação no chat."),
+    warning ? "error" : "success"
+  );
+};
 window.dilsaiSetAndroidCameraStatus = function(message, type) {
-  if (type === "error") setPhotoReviewBusy(false);
+  if (type === "error") {
+    setPhotoReviewBusy(false);
+    removePhotoSolvePlaceholder();
+  }
   setFullMaterialStatus(message, type || "info");
 };
 
@@ -1381,6 +1429,25 @@ function bindFullStudyChatEvents() {
       setPhotoReviewBusy(true);
       setFullMaterialStatus("Lendo texto da foto...", "info");
       bridge.confirmPhotoOcr();
+      return;
+    }
+
+    if (event.target.closest("#dilsai-full-photo-solve")) {
+      event.preventDefault();
+      const bridge = getAndroidCameraBridgeMethod("solvePhotoQuestion");
+      if (!bridge) {
+        setFullMaterialStatus("Atualize o app DilsAI para resolver pela foto.", "error");
+        return;
+      }
+      setPhotoReviewBusy(true);
+      setFullMaterialStatus("Analisando a foto...", "info");
+      removePhotoSolvePlaceholder();
+      dilsaiPhotoSolvePlaceholder = addFullStudyMessage(
+        "assistant",
+        "Analisando a foto da questão. Isso pode levar alguns segundos...",
+        "DilsAI"
+      ) || null;
+      bridge.solvePhotoQuestion();
       return;
     }
 
