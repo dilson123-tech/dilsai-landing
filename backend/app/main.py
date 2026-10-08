@@ -91,8 +91,14 @@ IMAGE_CONFIDENCE_MISSING_LINE = (
 IMAGE_INCOMPLETE_SIGNALS = re.compile(
     r"\b(?:cortad[oa]s?|incomplet[oa]s?|falta (?:o )?contexto|contexto completo"
     r"|nao (?:e possivel|consigo|da para) determinar|nova foto|foto melhor"
-    r"|forneca mais informacoes|nao assumir uma resposta)\b"
+    r"|forneca mais informacoes|nao assumir uma resposta"
+    # A resposta correta não aparece entre as alternativas visíveis (alternativa cortada da foto).
+    r"|nao (?:esta|aparece) (?:listad[oa]s?|nas alternativas|entre as alternativas)"
+    r"|nenhuma (?:das )?alternativas?|mais proxim[oa])\b"
 )
+# Alternativas lidas pela IA: "A)", "B)", ... Usado para detectar foto que mostrou só parte delas.
+IMAGE_ANSWER_OPTION_PATTERN = re.compile(r"(?<![A-Za-z])([A-E])\)")
+IMAGE_ANSWER_FINAL_SIGNALS = re.compile(r"\b(?:resposta final|alternativa correta|mais provavel)\b")
 # Palavras que o modelo às vezes devolve grudadas. Só pares conhecidos, para não mexer em texto válido.
 IMAGE_ANSWER_GLUED_WORDS = {
     "pedepara": "pede para",
@@ -461,7 +467,16 @@ def _image_answer_confidence(answer: str) -> str | None:
 def _image_answer_is_incomplete(answer: str) -> bool:
     plain = unicodedata.normalize("NFKD", (answer or "").lower())
     plain = "".join(char for char in plain if not unicodedata.combining(char))
-    return bool(IMAGE_INCOMPLETE_SIGNALS.search(plain))
+    if IMAGE_INCOMPLETE_SIGNALS.search(plain):
+        return True
+    return _image_answer_read_few_options(answer, plain)
+
+
+def _image_answer_read_few_options(answer: str, plain: str) -> bool:
+    # Questão de múltipla escolha com só 1 ou 2 alternativas lidas quase sempre é foto cortada:
+    # se a IA mesmo assim concluiu, a alternativa certa pode ser justamente a que ficou de fora.
+    options = set(IMAGE_ANSWER_OPTION_PATTERN.findall(answer or ""))
+    return 0 < len(options) <= 2 and bool(IMAGE_ANSWER_FINAL_SIGNALS.search(plain))
 
 
 def _fix_glued_words(answer: str) -> str:
