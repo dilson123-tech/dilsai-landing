@@ -44,6 +44,7 @@ const DILSAI_TOPICS = [
   { value: "redacao", label: "Redação" },
   { value: "programacao", label: "Programação" },
   { value: "informatica", label: "Informática" },
+  { value: "redes_computadores", label: "Redes de Computadores" },
   { value: "direito", label: "Direito" },
   { value: "administracao", label: "Administração" },
   { value: "fisica", label: "Física" },
@@ -59,6 +60,13 @@ const DILSAI_TOPICS = [
   { value: "humanas", label: "Humanas" },
   { value: "negocios", label: "Negócios" },
 ];
+
+const DILSAI_QUICK_ACTION_PROMPTS = {
+  prova_sem_gabarito:
+    "Com base no material enviado, crie uma prova com 5 questões de múltipla escolha. Não mostre o gabarito agora. Não mostre justificativas agora. Mostre apenas as questões e alternativas. Depois que eu responder, corrija minhas respostas uma por uma.",
+  corrigir_respostas:
+    "Corrija minhas respostas com base no material enviado. Explique cada acerto e cada erro de forma simples e mostre um resumo final.",
+};
 
 const DILSAI_MODES = [
   { value: "professor", label: "Modo Professor" },
@@ -144,6 +152,9 @@ function normalizeDilsAITopic(topic) {
     programação: "programacao",
     informatica: "informatica",
     informática: "informatica",
+    // O backend ainda não tem um tema próprio para redes; usa o mais próximo.
+    redes_computadores: "informatica",
+    redes: "informatica",
     direito: "direito",
     administracao: "administracao",
     administração: "administracao",
@@ -1251,8 +1262,13 @@ async function handleFullStudySubmit(event) {
   const modeLabel = getSelectLabel(mode);
   const rawContext = (context?.value || "").trim();
 
+  const topicHint = topic?.value === "redes_computadores"
+    ? "Matéria selecionada: Redes de Computadores."
+    : "";
+
   const enrichedContext = [
     `Nível de estudo selecionado: ${levelLabel || selectedLevel}.`,
+    topicHint,
     rawContext ? `Material/contexto enviado pelo usuário:\n${rawContext}` : "",
   ].filter(Boolean).join("\n\n");
 
@@ -1519,6 +1535,21 @@ function bindFullStudyChatEvents() {
     document.addEventListener("paste", (event) => {
       handleFullStudyPaste(event);
     });
+
+  document.addEventListener("click", (event) => {
+    const button = event.target?.closest?.("[data-dilsai-quick-action]");
+    if (!button) return;
+
+    const prompt = DILSAI_QUICK_ACTION_PROMPTS[button.dataset.dilsaiQuickAction];
+    const { input, form } = getFullStudyElements();
+    if (!prompt || !input || !form) return;
+
+    const submitButton = form.querySelector("button[type='submit']");
+    if (submitButton?.disabled) return;
+
+    input.value = prompt;
+    form.requestSubmit();
+  });
 
   document.addEventListener("submit", (event) => {
     if (event.target && event.target.id === "dilsai-full-chat-form") {

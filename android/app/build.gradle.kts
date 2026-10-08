@@ -23,8 +23,8 @@ android {
         applicationId = "com.dilsai.estudos"
         minSdk = 24
         targetSdk = 36
-        versionCode = 13
-        versionName = "0.4.5-low-confidence-answer-redaction"
+        versionCode = 14
+        versionName = "0.4.6-product-polish-icon"
     }
 
     signingConfigs {

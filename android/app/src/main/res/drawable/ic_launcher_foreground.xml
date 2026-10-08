@@ -1,20 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ícone legado (Android 7.x), mesma arte do ícone adaptativo. -->
+<!-- Frente do ícone adaptativo: "AI" + livro aberto, dentro da zona segura de 66dp. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:pathData="M20,4 H88 A16,16 0 0 1 104,20 V88 A16,16 0 0 1 88,104 H20 A16,16 0 0 1 4,88 V20 A16,16 0 0 1 20,4 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="108" android:endY="108">
-                <item android:offset="0" android:color="#2563EB"/>
-                <item android:offset="1" android:color="#7C3AED"/>
-            </gradient>
-        </aapt:attr>
-    </path>
-    <group android:pivotX="54" android:pivotY="54" android:scaleX="1.2" android:scaleY="1.2">
+    <group>
         <!-- Letras "AI" -->
         <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M37,54 L46,30 L52,30 L61,54 L55,54 L53.3,49 L44.7,49 L43,54 Z M46.3,44 L51.7,44 L49,36 Z"/>
         <path android:fillColor="#FFFFFF" android:pathData="M65,30 H71 V54 H65 Z"/>

@@ -1,11 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone legado (Android 7.x), mesma arte do ícone adaptativo. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#2563EB" android:pathData="M8,8h92v92H8z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M24,28h36c11,0 20,9 20,20v32H68V48c0,-4 -4,-8 -8,-8H36v44H24z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M46,52h28v10H46z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M46,70h18v10H46z"/>
-    <path android:fillColor="#BFDBFE" android:pathData="M82,22l4,10 10,4 -10,4 -4,10 -4,-10 -10,-4 10,-4z"/>
+    <path android:pathData="M54,4 A50,50 0 1 1 53.99,4 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="108" android:endY="108">
+                <item android:offset="0" android:color="#2563EB"/>
+                <item android:offset="1" android:color="#7C3AED"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="1.2" android:scaleY="1.2">
+        <!-- Letras "AI" -->
+        <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M37,54 L46,30 L52,30 L61,54 L55,54 L53.3,49 L44.7,49 L43,54 Z M46.3,44 L51.7,44 L49,36 Z"/>
+        <path android:fillColor="#FFFFFF" android:pathData="M65,30 H71 V54 H65 Z"/>
+        <!-- Livro aberto -->
+        <path android:fillColor="#FFFFFF" android:pathData="M53,62 C47,58 40,57 32,58 V76 C40,75 47,76 53,80 Z"/>
+        <path android:fillColor="#FFFFFF" android:pathData="M55,62 C61,58 68,57 76,58 V76 C68,75 61,76 55,80 Z"/>
+        <!-- Brilho -->
+        <path android:fillColor="#FDE68A" android:pathData="M77,36 L78.2,38.8 L81,40 L78.2,41.2 L77,44 L75.8,41.2 L73,40 L75.8,38.8 Z"/>
+    </group>
 </vector>
