@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from io import BytesIO
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -85,6 +86,27 @@ IMAGE_CONFIDENCE_NOTICES = {
 IMAGE_CONFIDENCE_MISSING_LINE = (
     "Confiança: média — confira o enunciado e as alternativas na foto antes de usar esta resposta."
 )
+# Sinais de que a IA não viu a questão inteira. Comparados sem acento e em minúsculas;
+# qualquer um força confiança baixa, mesmo que a IA tenha escrito "Confiança: média".
+IMAGE_INCOMPLETE_SIGNALS = re.compile(
+    r"\b(?:cortad[oa]s?|incomplet[oa]s?|falta (?:o )?contexto|contexto completo"
+    r"|nao (?:e possivel|consigo|da para) determinar|nova foto|foto melhor"
+    r"|forneca mais informacoes|nao assumir uma resposta)\b"
+)
+# Palavras que o modelo às vezes devolve grudadas. Só pares conhecidos, para não mexer em texto válido.
+IMAGE_ANSWER_GLUED_WORDS = {
+    "pedepara": "pede para",
+    "restanteda": "restante da",
+    "ajudara determinar": "ajudar a determinar",
+    "dedados": "de dados",
+    "aper pergunta": "a pergunta",
+    "questãocompleta": "questão completa",
+}
+IMAGE_ANSWER_GLUED_PATTERN = re.compile(
+    r"\b(" + "|".join(re.escape(word) for word in IMAGE_ANSWER_GLUED_WORDS) + r")\b", re.IGNORECASE
+)
+# "evitar:Não" -> "evitar: Não". Só letra minúscula + ":" + maiúscula, para não tocar em horas ou URLs.
+IMAGE_ANSWER_COLON_PATTERN = re.compile(r"([a-zà-ÿ]):([A-ZÀ-Þ])")
 IMAGE_UPLOAD_MAX_BYTES = 5_000_000
 IMAGE_MAX_PIXELS = 40_000_000
 IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
@@ -436,6 +458,22 @@ def _image_answer_confidence(answer: str) -> str | None:
     return "media" if value in {"média", "media"} else value
 
 
+def _image_answer_is_incomplete(answer: str) -> bool:
+    plain = unicodedata.normalize("NFKD", (answer or "").lower())
+    plain = "".join(char for char in plain if not unicodedata.combining(char))
+    return bool(IMAGE_INCOMPLETE_SIGNALS.search(plain))
+
+
+def _fix_glued_words(answer: str) -> str:
+    def replace(match: re.Match) -> str:
+        word = match.group(0)
+        fixed = IMAGE_ANSWER_GLUED_WORDS[word.lower()]
+        return fixed[0].upper() + fixed[1:] if word[0].isupper() else fixed
+
+    answer = IMAGE_ANSWER_GLUED_PATTERN.sub(replace, answer or "")
+    return IMAGE_ANSWER_COLON_PATTERN.sub(r"\1: \2", answer)
+
+
 def _enum_header(request: Request, name: str, enum_cls, default):
     value = (request.headers.get(name) or "").strip()
     try:
@@ -491,8 +529,12 @@ async def solve_image_question(request: Request) -> dict:
         )
         raise HTTPException(status_code=503, detail=detail) from exc
 
+    answer = _fix_glued_words(answer)
     confidence = _image_answer_confidence(answer)
-    if confidence is None:
+    if _image_answer_is_incomplete(answer):
+        # A IA disse que a questão está cortada/incompleta: nunca tratar como respondível.
+        confidence = "baixa"
+    elif confidence is None:
         # A IA esqueceu a linha de confiança: não tratar a resposta como garantida.
         confidence = "media"
         answer = f"{answer.rstrip()}\n\n{IMAGE_CONFIDENCE_MISSING_LINE}"

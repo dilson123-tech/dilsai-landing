@@ -74,7 +74,7 @@ def test_image_prompt_requires_confidence_level():
 def test_image_prompt_forbids_final_answer_with_low_confidence():
     prompt = build_image_question_prompt()
 
-    assert "Confiança baixa: NÃO marque alternativa e NÃO dê resposta final." in prompt
+    assert 'Confiança baixa: NÃO escreva "Resposta final", NÃO escolha nem marque alternativa.' in prompt
     assert "Não consegui ler a questão com segurança." in prompt
     assert "Confiança média" in prompt and "com ressalva forte" in prompt
 
@@ -93,6 +93,13 @@ def test_image_prompt_asks_new_photo_when_alternatives_or_data_unreadable():
     assert "Se não conseguir ler todas as alternativas, a confiança é baixa" in prompt
     assert "peça para tirar outra foto mais perto, com boa luz e a questão inteira no enquadramento" in prompt
     assert "digitar o enunciado e as alternativas" in prompt
+
+
+def test_image_prompt_forces_low_confidence_when_photo_is_cut():
+    prompt = build_image_question_prompt()
+
+    assert 'faltar qualquer alternativa ou dado essencial, declare obrigatoriamente "Confiança: baixa"' in prompt
+    assert "Confiança: média — SOMENTE quando a questão está inteira na foto" in prompt
 
 
 @pytest.mark.parametrize(
@@ -289,3 +296,87 @@ def test_generate_image_answer_sends_vision_payload(monkeypatch):
 
 def test_solve_image_uses_materials_rate_limit_bucket():
     assert main_module._expensive_route_limit("/api/v1/materials/solve-image")[0] == "materials"
+
+
+def _solve(client):
+    response = client.post(
+        "/api/v1/materials/solve-image", content=_image_bytes(), headers={"Content-Type": "image/jpeg"}
+    )
+    assert response.status_code == 200
+    return response.json()
+
+
+def test_solve_image_cut_question_forces_low_confidence(client, fake_llm):
+    fake_llm.answer[0] = (
+        "O que consegui ler: a questão está cortada; o restante do enunciado não aparece.\n"
+        "Confiança: média — falta parte do texto.\n"
+        "Não é possível determinar a alternativa correta."
+    )
+    body = _solve(client)
+
+    assert body["confidence"] == "baixa"
+    assert body["can_answer"] is False
+    assert body["needs_better_photo"] is True
+    assert body["notice"] == main_module.IMAGE_CONFIDENCE_NOTICES["baixa"]
+
+
+def test_solve_image_normal_high_confidence_stays_high(client, fake_llm):
+    fake_llm.answer[0] = "O que consegui ler: 2 + 3; A) 4 B) 5 C) 6.\nConfiança: alta — tudo legível.\nResposta final: B) 5."
+    body = _solve(client)
+
+    assert body["confidence"] == "alta"
+    assert body["can_answer"] is True
+    assert body["needs_better_photo"] is False
+
+
+@pytest.mark.parametrize(
+    "answer,confidence",
+    [
+        ("Resposta final: B.", "media"),
+        ("A questão parece incompleta, não consigo determinar a alternativa.", "baixa"),
+        ("Nao e possivel determinar sem uma nova foto.", "baixa"),
+    ],
+)
+def test_solve_image_fallback_without_confidence_line(client, fake_llm, answer, confidence):
+    fake_llm.answer[0] = answer
+    body = _solve(client)
+
+    assert body["confidence"] == confidence
+    assert body["can_answer"] is (confidence != "baixa")
+    assert body["needs_better_photo"] is (confidence == "baixa")
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Confiança: alta. Pacote recortado não conta.",
+        "Confiança: alta. O handshake completo tem 3 etapas.",
+    ],
+)
+def test_incomplete_signals_ignore_unrelated_words(text):
+    assert main_module._image_answer_is_incomplete(text) is False
+
+
+@pytest.mark.parametrize(
+    "raw,fixed",
+    [
+        ("A questão pedepara somar.", "A questão pede para somar."),
+        ("O restanteda questão sumiu.", "O restante da questão sumiu."),
+        ("Isso vai ajudara determinar.", "Isso vai ajudar a determinar."),
+        ("Banco dedados.", "Banco de dados."),
+        ("Leia aper pergunta.", "Leia a pergunta."),
+        ("Envie a questãocompleta.", "Envie a questão completa."),
+        ("Erro comum a evitar:Não somar errado.", "Erro comum a evitar: Não somar errado."),
+        ("Às 10:30, veja https://dilsai.app.", "Às 10:30, veja https://dilsai.app."),
+    ],
+)
+def test_fix_glued_words(raw, fixed):
+    assert main_module._fix_glued_words(raw) == fixed
+
+
+def test_solve_image_returns_cleaned_answer(client, fake_llm):
+    fake_llm.answer[0] = "Confiança: alta — legível.\nA questão pedepara somar.\nErro comum a evitar:Não trocar o sinal."
+    body = _solve(client)
+
+    assert "pede para somar" in body["answer"]
+    assert "evitar: Não trocar" in body["answer"]
